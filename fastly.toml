@@ -1,0 +1,12 @@
+# This file describes a Fastly Compute@Edge package. To learn more visit:
+# https://developer.fastly.com/reference/fastly-toml/
+
+authors = ["nisse@tnfgruppen.com"]
+description = "Small e-com shop built on the edge"
+language = "javascript"
+manifest_version = 2
+name = "EdgeShop"
+service_id = "4iFh0MOE83rtl8kUy62wut"
+
+[scripts]
+  build = "npm exec webpack && npm exec js-compute-runtime ./bin/index.js ./bin/main.wasm"
