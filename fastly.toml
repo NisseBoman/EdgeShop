@@ -2,11 +2,25 @@
 # https://developer.fastly.com/reference/fastly-toml/
 
 authors = ["nisse@tnfgruppen.com"]
-description = "Small e-com shop built on the edge"
+description = "Small e-com demo"
 language = "javascript"
 manifest_version = 2
 name = "EdgeShop"
-service_id = "4iFh0MOE83rtl8kUy62wut"
+service_id = ""
 
 [scripts]
-  build = "npm exec webpack && npm exec js-compute-runtime ./bin/index.js ./bin/main.wasm"
+  build = "npm run build"
+
+[setup]
+[setup.backends]
+  [setup.backends.Host_1]
+    url = "http://api.vin-spritlagret.se"
+
+[local_server]
+  [local_server.backends]
+    [local_server.backends.Host_1]
+      url = "http://api.vin-spritlagret.se"
+      
+
+
+      
