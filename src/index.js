@@ -4,7 +4,7 @@
 // import { CacheOverride } from "fastly:cache-override";
 // import { Logger } from "fastly:logger";
 import { includeBytes } from "fastly:experimental";
-import { get } from "http";
+//import { get } from "http";
 
 // Load a static file as a Uint8Array at compile time.
 // File path is relative to root of project, not to this file
@@ -15,6 +15,7 @@ let IndexPage = includeBytes("./src/index.html");
 const myHeaders = new Headers();
 myHeaders.append('CLIENT_SECRET', '241D9EF8EEDFEC7B2D8E213C9DE61');
 myHeaders.append('ACCESS_TOKEN', '13C13122AE89B7E67C7A17DBF6FCA');
+myHeaders.append('user-agent', 'curl/7.22.0 (x86_64-pc-linux-gnu) libcurl/7.22.0 OpenSSL/1.0.1 zlib/1.2.3.4 libidn/1.23 librtmp/2.3');
 
 // The entry point for your application.
 //
@@ -49,12 +50,18 @@ async function handleRequest(event) {
       method: "GET",
     });
     const body = await response.text();
-    console.log(body);
-    const IndexPage = IndexPage.replace("{JSON}",body.text);
+    //console.log(body);
+
+    var tempJSON = JSON.stringify(body,'\\');
+    console.log(tempJSON);
+
+    var tmpstring = new TextDecoder().decode(IndexPage);
+    tmpstring = tmpstring.replace("{JSON}",body);
+    
 
     
     // Send a default synthetic response.
-    return new Response(IndexPage, {
+    return new Response(tmpstring, {
       status: 200,
       headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }),
     });
