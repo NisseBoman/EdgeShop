@@ -6,7 +6,7 @@ description = "Small e-com demo"
 language = "javascript"
 manifest_version = 2
 name = "EdgeShop"
-service_id = ""
+service_id = "4iFh0MOE83rtl8kUy62wut"
 
 [scripts]
   build = "npm run build"
@@ -14,12 +14,14 @@ service_id = ""
 [setup]
 [setup.backends]
   [setup.backends.Host_1]
-    url = "http://api.vin-spritlagret.se"
+    url = "https://api.vin-spritlagret.se"
+    
 
 [local_server]
   [local_server.backends]
     [local_server.backends.Host_1]
-      url = "http://api.vin-spritlagret.se"
+      url = "https://api.vin-spritlagret.se"
+      
       
 
 

@@ -5,6 +5,7 @@
 // import { Logger } from "fastly:logger";
 import { includeBytes } from "fastly:experimental";
 //import { get } from "http";
+import { CacheOverride } from "fastly:cache-override";
 
 // Load a static file as a Uint8Array at compile time.
 // File path is relative to root of project, not to this file
@@ -15,7 +16,10 @@ let IndexPage = includeBytes("./src/index.html");
 const myHeaders = new Headers();
 myHeaders.append('CLIENT_SECRET', '241D9EF8EEDFEC7B2D8E213C9DE61');
 myHeaders.append('ACCESS_TOKEN', '13C13122AE89B7E67C7A17DBF6FCA');
-myHeaders.append('user-agent', 'curl/7.22.0 (x86_64-pc-linux-gnu) libcurl/7.22.0 OpenSSL/1.0.1 zlib/1.2.3.4 libidn/1.23 librtmp/2.3');
+myHeaders.append('content-type', 'application/json; charset=utf-8');
+myHeaders.append('user-agent', 'curl/7.21.0 (x86_64-pc-linux-gnu) libcurl/7.22.0 OpenSSL/1.0.1 zlib/1.2.3.4 libidn/1.23 librtmp/2.3');
+//myHeaders.append('user-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36');
+
 
 // The entry point for your application.
 //
@@ -44,19 +48,61 @@ async function handleRequest(event) {
   if (url.pathname == "/") {
        
 
-    const response = await fetch('http://api.vin-spritlagret.se/product/618/', {
+    let cacheOverride = new CacheOverride('override', {ttl: 120});
+
+    const response = await fetch('https://api.vin-spritlagret.se/product/618/', {
       backend: "Host_1",
       headers: myHeaders,
       method: "GET",
+      cacheOverride
     });
-    const body = await response.text();
-    //console.log(body);
+    let product1 = await response.json(); 
 
-    var tempJSON = JSON.stringify(body,'\\');
-    console.log(tempJSON);
+    const response2 = await fetch('https://api.vin-spritlagret.se/product/614/', {
+      backend: "Host_1",
+      headers: myHeaders,
+      method: "GET",
+      cacheOverride
+    });
+    let product2 = await response2.json(); 
 
+    const response3 = await fetch('https://api.vin-spritlagret.se/product/617/', {
+      backend: "Host_1",
+      headers: myHeaders,
+      method: "GET",
+      cacheOverride
+    });
+    let product3 = await response3.json(); 
+
+    
+    
+    //console.log(body.Products.title);
+
+    
+    /*
+    for (var i=0; i < Object.keys (body.Products).length; i++) {
+      console.log(body[i]);
+
+    }
+    for (var prod of body.Products)
+    {
+      console.log(prod.product_title);
+    }
+    */
+  
+    
     var tmpstring = new TextDecoder().decode(IndexPage);
-    tmpstring = tmpstring.replace("{JSON}",body);
+
+    tmpstring = tmpstring.replace("{1_Name}", product1.Products.title);
+    tmpstring = tmpstring.replace("{1_image_path}",product1.Products.image);
+
+    tmpstring = tmpstring.replace("{2_Name}", product2.Products.title);
+    tmpstring = tmpstring.replace("{2_image_path}",product2.Products.image);
+
+    tmpstring = tmpstring.replace("{3_Name}", product3.Products.title);
+    tmpstring = tmpstring.replace("{3_image_path}",product3.Products.image);
+
+    tmpstring = tmpstring.replace("{JSON}",JSON.stringify(product1));
     
 
     
