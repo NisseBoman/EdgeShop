@@ -154,8 +154,8 @@ async function handleRequest(event) {
     
     var tmpstring = new TextDecoder().decode(ProductPage);
 
-    tmpstring = tmpstring.replace("{Product_Title}", product.Products.title);
-    tmpstring = tmpstring.replace("{Product_Title}", product.Products.title);
+    tmpstring = tmpstring.replaceAll("{Product_Title}", product.Products.title);
+    
     tmpstring = tmpstring.replace("{Product_image_path}",product.Products.image);
     tmpstring = tmpstring.replace("{Product_Description}", product.Products.description_character);
     tmpstring = tmpstring.replace("{JSON}",JSON.stringify(product));
