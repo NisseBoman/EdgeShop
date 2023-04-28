@@ -11,7 +11,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1, shrink-to-fit=no"
     />
-    <title>Welcome to the EdgeShop</title>
+    <title>Welcome to the EdgeShop - {Product_Title}</title>
 
 
   </head>
@@ -43,26 +43,16 @@
     </div>
 
     <div class="container px-4">
-  <div class="row gx-5">
-    <div class="col">
-     <div class="p-3 border bg-light">
-    <center>
-       {1_Name}<br><a href="/product/{1_product_id}/"><img src="http://v3.vin-spritlagret.se/{1_image_path}?height=300&format=webp"></a>
-     </center>
-     </div>
+        <div class="container-fluid">
+            <center>
+               <h1>{Product_Title}</h1> <br><img src="http://v3.vin-spritlagret.se/{Product_image_path}?height=300&format=webp">
+             </center>
+        </div>
+        <div class="container-fluid">
+            {Product_Description}
+        </div>
+
     </div>
-    <div class="col">
-      <div class="p-3 border bg-light"><center>
-         {2_Name}<br><a href="/product/{2_product_id}/"><img src="https://v3.vin-spritlagret.se/{2_image_path}?height=300&format=webp"></a>
-       </center></div>
-    </div>
-    <div class="col">
-      <div class="p-3 border bg-light"><center>
-         {3_Name}<br><a href="/product/{3_product_id}/"><img src="https://v3.vin-spritlagret.se/{3_image_path}?height=300&format=webp"></a>
-       </center></div>
-    </div>
-  </div>
-</div>
 
 <div class="container">
 JSON response for first product:<br>

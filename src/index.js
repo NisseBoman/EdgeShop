@@ -9,8 +9,8 @@ import { CacheOverride } from "fastly:cache-override";
 
 // Load a static file as a Uint8Array at compile time.
 // File path is relative to root of project, not to this file
-let IndexPage = includeBytes("./src/index.html");
-
+let ProductPage = includeBytes("./src/product.html");
+let IndexPage = includeBytes("./src/index.html");  
 
 
 const myHeaders = new Headers();
@@ -46,7 +46,7 @@ async function handleRequest(event) {
 
   // If request is to the `/` path...
   if (url.pathname == "/") {
-       
+     
 
     let cacheOverride = new CacheOverride('override', {ttl: 120});
 
@@ -89,21 +89,84 @@ async function handleRequest(event) {
       console.log(prod.product_title);
     }
     */
-  
+    
+
+    
     
     var tmpstring = new TextDecoder().decode(IndexPage);
 
     tmpstring = tmpstring.replace("{1_Name}", product1.Products.title);
+    tmpstring = tmpstring.replace("{1_product_id}", product1.Products.id);
     tmpstring = tmpstring.replace("{1_image_path}",product1.Products.image);
 
     tmpstring = tmpstring.replace("{2_Name}", product2.Products.title);
+    tmpstring = tmpstring.replace("{2_product_id}", product2.Products.id);
     tmpstring = tmpstring.replace("{2_image_path}",product2.Products.image);
+
+    tmpstring = tmpstring.replace("{3_Name}", product3.Products.title);
+    tmpstring = tmpstring.replace("{3_product_id}", product3.Products.id);
+    tmpstring = tmpstring.replace("{3_image_path}",product3.Products.image);
+
+    tmpstring = tmpstring.replace("{JSON}",JSON.stringify(product1));
+    
+
+    
+    // Send a default synthetic response.
+    return new Response(tmpstring, {
+      status: 200,
+      headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }),
+    });
+  }
+
+
+
+  if (url.pathname.startsWith("/product/")) {
+    let tmpproductid =url.pathname.replace(/[^0-9]/g, '');
+    console.log("requestd id: " + tmpproductid);
+
+    let cacheOverride = new CacheOverride('override', {ttl: 120});
+
+    const response = await fetch('https://api.vin-spritlagret.se/product/' + tmpproductid +'/', {
+      backend: "Host_1",
+      headers: myHeaders,
+      method: "GET",
+      cacheOverride
+    });
+    let product = await response.json(); 
+
+    console.log(product);
+    
+
+    
+    
+    //console.log(body.Products.title);
+    /*
+    for (var i=0; i < Object.keys (body.Products).length; i++) {
+      console.log(body[i]);
+
+    }
+    for (var prod of body.Products)
+    {
+      console.log(prod.product_title);
+    }
+    */
+  
+    
+    var tmpstring = new TextDecoder().decode(ProductPage);
+
+    tmpstring = tmpstring.replace("{Product_Title}", product.Products.title);
+    tmpstring = tmpstring.replace("{Product_Title}", product.Products.title);
+    tmpstring = tmpstring.replace("{Product_image_path}",product.Products.image);
+    tmpstring = tmpstring.replace("{Product_Description}", product.Products.description_character);
+    tmpstring = tmpstring.replace("{JSON}",JSON.stringify(product));
+    
+    /*tmpstring = tmpstring.replace("{2_image_path}",product2.Products.image);
 
     tmpstring = tmpstring.replace("{3_Name}", product3.Products.title);
     tmpstring = tmpstring.replace("{3_image_path}",product3.Products.image);
 
     tmpstring = tmpstring.replace("{JSON}",JSON.stringify(product1));
-    
+    */
 
     
     // Send a default synthetic response.
