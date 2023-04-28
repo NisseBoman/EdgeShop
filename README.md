@@ -1,4 +1,4 @@
-# Default Starter Kit for JavaScript
+# EdgeShop demo / playground
 
 [![Deploy to Fastly](https://deploy.edgecompute.app/button)](https://deploy.edgecompute.app/deploy)
 
