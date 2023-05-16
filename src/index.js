@@ -11,7 +11,7 @@ import { CacheOverride } from "fastly:cache-override";
 // File path is relative to root of project, not to this file
 let ProductPage = includeBytes("./src/product.html");
 let IndexPage = includeBytes("./src/index.html");  
-
+let AllProductsPage = includeBytes("./src/products.html");
 
 const myHeaders = new Headers();
 myHeaders.append('CLIENT_SECRET', '241D9EF8EEDFEC7B2D8E213C9DE61');
@@ -75,23 +75,7 @@ async function handleRequest(event) {
     let product3 = await response3.json(); 
 
     
-    
     //console.log(body.Products.title);
-
-    
-    /*
-    for (var i=0; i < Object.keys (body.Products).length; i++) {
-      console.log(body[i]);
-
-    }
-    for (var prod of body.Products)
-    {
-      console.log(prod.product_title);
-    }
-    */
-    
-
-    
     
     var tmpstring = new TextDecoder().decode(IndexPage);
 
@@ -118,11 +102,35 @@ async function handleRequest(event) {
     });
   }
 
+  if (url.pathname.startsWith("/products")) {
+    
+    let cacheOverride = new CacheOverride('override', {ttl: 120});
+
+    const response = await fetch('https://api.vin-spritlagret.se/product/', {
+      backend: "Host_1",
+      headers: myHeaders,
+      method: "GET",
+      cacheOverride
+    });
+    let AllProducts = await response.json();
+
+
+    var tmpstring = new TextDecoder().decode(AllProductsPage);
+    tmpstring = tmpstring.replace("{all_json}",JSON.stringify(AllProducts));
+    
+    
+    // Send a default synthetic response.
+    return new Response(tmpstring, {
+      status: 200,
+      headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }),
+    });
+
+  }
 
 
   if (url.pathname.startsWith("/product/")) {
     let tmpproductid =url.pathname.replace(/[^0-9]/g, '');
-    console.log("requestd id: " + tmpproductid);
+    //console.log("requestd id: " + tmpproductid);
 
     let cacheOverride = new CacheOverride('override', {ttl: 120});
 
@@ -134,11 +142,6 @@ async function handleRequest(event) {
     });
     let product = await response.json(); 
 
-    console.log(product);
-    
-
-    
-    
     //console.log(body.Products.title);
     /*
     for (var i=0; i < Object.keys (body.Products).length; i++) {
@@ -160,14 +163,6 @@ async function handleRequest(event) {
     tmpstring = tmpstring.replace("{Product_Description}", product.Products.description_character);
     tmpstring = tmpstring.replace("{JSON}",JSON.stringify(product));
     
-    /*tmpstring = tmpstring.replace("{2_image_path}",product2.Products.image);
-
-    tmpstring = tmpstring.replace("{3_Name}", product3.Products.title);
-    tmpstring = tmpstring.replace("{3_image_path}",product3.Products.image);
-
-    tmpstring = tmpstring.replace("{JSON}",JSON.stringify(product1));
-    */
-
     
     // Send a default synthetic response.
     return new Response(tmpstring, {
