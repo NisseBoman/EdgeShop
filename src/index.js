@@ -58,7 +58,7 @@ async function handleRequest(event) {
     });
     let product1 = await response.json(); 
 
-    const response2 = await fetch('https://api.vin-spritlagret.se/product/614/', {
+    const response2 = await fetch('https://api.vin-spritlagret.se/product/1021/', {
       backend: "Host_1",
       headers: myHeaders,
       method: "GET",
@@ -66,7 +66,7 @@ async function handleRequest(event) {
     });
     let product2 = await response2.json(); 
 
-    const response3 = await fetch('https://api.vin-spritlagret.se/product/617/', {
+    const response3 = await fetch('https://api.vin-spritlagret.se/product/4868/', {
       backend: "Host_1",
       headers: myHeaders,
       method: "GET",
@@ -98,7 +98,7 @@ async function handleRequest(event) {
     // Send a default synthetic response.
     return new Response(tmpstring, {
       status: 200,
-      headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }),
+      headers: new Headers({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=432000" }),
     });
   }
 
@@ -122,7 +122,7 @@ async function handleRequest(event) {
     // Send a default synthetic response.
     return new Response(tmpstring, {
       status: 200,
-      headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }),
+      headers: new Headers({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=432000" }),
     });
 
   }
@@ -167,7 +167,7 @@ async function handleRequest(event) {
     // Send a default synthetic response.
     return new Response(tmpstring, {
       status: 200,
-      headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }),
+      headers: new Headers({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=432000" }),
     });
   }
 
