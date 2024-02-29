@@ -47,24 +47,73 @@
     <div class="col">
      <div class="p-3 border bg-light">
     <center>
-       {1_Name}<br><a href="/product/{1_product_id}/"><img src="http://v3.vin-spritlagret.se/{1_image_path}?height=300&format=webp"></a>
+       {1_Name}<br><a href="/product/{1_product_id}/"><img src="/images/{1_image_path}"></a>
      </center>
+     <span>{1_product_desc}</span>
      </div>
     </div>
     <div class="col">
       <div class="p-3 border bg-light"><center>
-         {2_Name}<br><a href="/product/{2_product_id}/"><img src="https://v3.vin-spritlagret.se/{2_image_path}?height=300&format=webp"></a>
-       </center></div>
+         {2_Name}<br><a href="/product/{2_product_id}/"><img src="/images/{2_image_path}"></a>
+       </center>
+       <span>{2_product_desc}</span>
+      </div>
     </div>
     <div class="col">
       <div class="p-3 border bg-light"><center>
-         {3_Name}<br><a href="/product/{3_product_id}/"><img src="https://v3.vin-spritlagret.se/{3_image_path}?height=300&format=webp"></a>
-       </center></div>
+         {3_Name}<br><a href="/product/{3_product_id}/"><img src="/images/{3_image_path}"></a>
+       </center>
+       <span>{3_product_desc}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row gx-5">
+    <div class="col">
+     <div class="p-3 border ">
+    &nbsp;
+     </div>
+    </div>
+    <div class="col">
+      <div class="p-3 border ">
+        &nbsp;
+      </div>
+    </div>
+    <div class="col">
+      <div class="p-3 border ">
+        &nbsp;
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="row gx-5">
+    <div class="col">
+     <div class="p-3 border bg-light">
+    <center>
+       {4_Name}<br><a href="/product/{4_product_id}/"><img src="/images/{4_image_path}"></a>
+     </center>
+     <span>{4_product_desc}</span>
+     </div>
+    </div>
+    <div class="col">
+      <div class="p-3 border bg-light"><center>
+         {5_Name}<br><a href="/product/{5_product_id}/"><img src="/images/{5_image_path}"></a>
+       </center>
+       <span>{5_product_desc}</span>
+      </div>
+    </div>
+    <div class="col">
+      <div class="p-3 border bg-light"><center>
+         {6_Name}<br><a href="/product/{6_product_id}/"><img src="/images/{6_image_path}"></a>
+       </center>
+       <span>{6_product_desc}</span>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="container">
+<div class="container d-none" >
 JSON response for first product:<br>
 <pre style="white-space: pre-wrap;">{JSON}</pre>
 </div>

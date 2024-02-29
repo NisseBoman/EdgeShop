@@ -15,13 +15,27 @@ service_id = "4iFh0MOE83rtl8kUy62wut"
 [setup.backends]
   [setup.backends.Host_1]
     url = "https://api.vin-spritlagret.se"
+    override_host = "api.vin-spritlagret.se"
     
 
 [local_server]
   [local_server.backends]
     [local_server.backends.Host_1]
       url = "https://api.vin-spritlagret.se"
+      override_host = "api.vin-spritlagret.se"
       
+     [local_server.kv_stores]
+
+    [[local_server.kv_stores.EdgeStoreItems]]
+      key = "Items"
+      file = "product.json"
+    [[local_server.kv_stores.EdgeStoreItems]]
+      key = "img_9032.jpg"
+      file= "white_wine.jpg"
+    [[local_server.kv_stores.EdgeStoreItems]]  
+      key = "img_9013.png"
+      file = "duff.png"
+  
       
 
 

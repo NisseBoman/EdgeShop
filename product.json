@@ -1,0 +1,48 @@
+{
+    "version": 1.0,
+    "releaseDate": "2024-02-20T00:00:00.000Z",
+    "Products": [
+      {
+        "ProductId" : 9032,
+        "ProductName": "White wine",
+        "ProductDesc": "White girl wine",
+        "ProductPrice": 120.2,
+        "ProductImage": "img_9032.jpg"
+      },
+      {
+        "ProductId" : 9022,
+        "ProductName": "Red wine",
+        "ProductDesc": "Divorced juice",
+        "ProductPrice": 120.2,
+        "ProductImage": "img_9032.jpg"
+      },
+      {
+        "ProductId" : 9012,
+        "ProductName": "Boring Beer",
+        "ProductDesc": "I like NFL...",
+        "ProductPrice": 120.2,
+        "ProductImage": "img_9032.jpg"
+      },
+      {
+        "ProductId" : 9013,
+        "ProductName": "Duff",
+        "ProductDesc": "I punch bears in the face for breakfast",
+        "ProductPrice": 120.2,
+        "ProductImage": "img_9013.png"
+      },
+      {
+        "ProductId" : 9002,
+        "ProductName": "Champange",
+        "ProductDesc": "I really good at braging",
+        "ProductPrice": 920.2,
+        "ProductImage": "img_9032.jpg"
+      },
+      {
+        "ProductId" : 9042,
+        "ProductName": "M00nshine",
+        "ProductDesc": "I've lost my last tooth",
+        "ProductPrice": 920.2,
+        "ProductImage": "img_9032.jpg"
+      }
+    ]
+  }
