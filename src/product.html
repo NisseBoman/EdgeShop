@@ -36,6 +36,14 @@
       .text-primary {
         color: var(--fastly-blue) !important;
       }
+      
+      .product-image {
+        min-width: 300px;
+        max-width: 500px;
+        width: 100%;
+        height: auto;
+        border-radius: 12px;
+      }
     </style>
   </head>
   <body>
@@ -74,7 +82,7 @@
       <div class="row">
         <div class="col-lg-7">
           <div class="position-sticky" style="top: 2rem;">
-            <img src="/images/{Product_image_path}" class="img-fluid rounded-4 shadow-lg" alt="{Product_Title}">
+            <img src="/images/{Product_image_path}" class="product-image" alt="{Product_Title}">
           </div>
         </div>
         <div class="col-lg-5">

@@ -17,8 +17,7 @@ const PAGES = {
 // Cache common headers
 const COMMON_HEADERS = {
   "Content-Type": "text/html; charset=utf-8",
-  "Cache-Control": "public, max-age=432000",
-  "x-compress-hint": "on"
+  "Cache-Control": "public, max-age=432000"
 };
 
 const IMAGE_HEADERS = ext => ({
