@@ -14,16 +14,17 @@ This is a demo created that uses an older API created by me and with a webfront 
 * Build synthetic responses at the edge
 
 ## Planned features (TODO)
-* Get product information (PIP page)
 * Sort products
 * Search products
 
 
-## Misc Todo's
-* Handle the API key in other way than source (secret store maby?)
-* Brush the look
-
 ## Key Features Implementation
+
+### Performance
+* 100% of the requests are served from the edge
+* Dynamic compression
+* Using KV Store
+* Using Fastly Cache
 
 ### Cart Management
 - Uses browser cookies to maintain cart state
