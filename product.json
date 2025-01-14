@@ -5,44 +5,44 @@
       {
         "ProductId" : 9032,
         "ProductName": "White wine",
-        "ProductDesc": "White girl wine",
+        "ProductDesc": "Perfect for those 'Live, Laugh, Love' moments. Pairs wonderfully with Instagram stories, brunch selfies, and saying 'literally' every third word. Warning: May cause spontaneous yoga poses.",
         "ProductPrice": 120.2,
         "ProductImage": "img_9032.jpg"
       },
       {
         "ProductId" : 9022,
         "ProductName": "Red wine",
-        "ProductDesc": "Divorced juice",
+        "ProductDesc": "The official sponsor of dramatic Facebook status updates and late-night online shopping. Comes with a complimentary playlist of empowering breakup songs. Best served with a side of 'their loss!'",
         "ProductPrice": 120.2,
-        "ProductImage": "img_9032.jpg"
+        "ProductImage": "img_9022.jpg"
       },
       {
         "ProductId" : 9012,
         "ProductName": "Boring Beer",
-        "ProductDesc": "I like NFL...",
+        "ProductDesc": "The perfect companion for explaining why that last play was actually offside. Contains just enough personality to discuss fantasy football stats for three hours straight. Pairs well with buffalo wings and shouting at the TV.",
         "ProductPrice": 120.2,
-        "ProductImage": "img_9032.jpg"
+        "ProductImage": "img_9012.jpg"
       },
       {
         "ProductId" : 9013,
         "ProductName": "Duff",
-        "ProductDesc": "I punch bears in the face for breakfast",
+        "ProductDesc": "The choice beverage of Springfield's finest! Guaranteed to make you say 'D'oh!' after one too many. Warning: May cause sudden cravings for donuts and a decrease in nuclear safety awareness. Mr. Burns approved!",
         "ProductPrice": 120.2,
         "ProductImage": "img_9013.png"
       },
       {
         "ProductId" : 9002,
         "ProductName": "Champange",
-        "ProductDesc": "I really good at braging",
+        "ProductDesc": "Because nothing says 'I'm better than you' quite like mispronouncing 'Champagne.' Perfect for celebrating your third startup's second pre-seed round or just making Tuesday feel fancy. Pairs excellently with caviar dreams and Silicon Valley schemes.",
         "ProductPrice": 920.2,
-        "ProductImage": "img_9032.jpg"
+        "ProductImage": "img_9002.jpg"
       },
       {
         "ProductId" : 9042,
         "ProductName": "M00nshine",
-        "ProductDesc": "I've lost my last tooth",
+        "ProductDesc": "Distilled in a bathtub, aged in a rusty bucket, and guaranteed to make your cousin's wedding story sound way more interesting. Side effects may include spontaneous banjo playing and an urge to call everyone 'cousin.' Dental plan not included.",
         "ProductPrice": 920.2,
-        "ProductImage": "img_9032.jpg"
+        "ProductImage": "img_9042.jpg"
       }
     ]
   }

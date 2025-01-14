@@ -16,14 +16,13 @@ service_id = "4iFh0MOE83rtl8kUy62wut"
   [setup.backends.Host_1]
     url = "https://api.vin-spritlagret.se"
     override_host = "api.vin-spritlagret.se"
-    
 
 [local_server]
   [local_server.backends]
     [local_server.backends.Host_1]
       url = "https://api.vin-spritlagret.se"
       override_host = "api.vin-spritlagret.se"
-      
+    
      [local_server.kv_stores]
 
     [[local_server.kv_stores.EdgeStoreItems]]

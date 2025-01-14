@@ -12,6 +12,24 @@
       content="width=device-width, initial-scale=1, shrink-to-fit=no"
     />
     <title>Welcome to the EdgeShop</title>
+    <style>
+      .product-thumbnail {
+        max-width: 200px;
+        height: auto;
+      }
+      .product-desc {
+        font-size: 0.9rem;
+        line-height: 1.4;
+        margin: 0 10px;
+        color: #666;
+      }
+      .product-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: #333;
+      }
+    </style>
 
 
   </head>
@@ -28,10 +46,19 @@
               <a class="nav-link active" aria-current="page" href="/">Home</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="products.html">Products</a>
+              <a class="nav-link" href="/products">Products</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="about.html">About us</a>
+              <a class="nav-link" href="/about">About us</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="/cart">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart" viewBox="0 0 16 16">
+                  <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l1.313 7h8.17l1.313-7H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                </svg>
+              </a>
             </li>
           </ul>
         </div>
@@ -47,23 +74,32 @@
     <div class="col">
      <div class="p-3 border bg-light">
     <center>
-       {1_Name}<br><a href="/product/{1_product_id}/"><img src="/images/{1_image_path}"></a>
+       <div class="product-title">{1_Name}</div>
+       <a href="/product/{1_product_id}/"><img src="/images/{1_image_path}" class="product-thumbnail"></a>
+       <div class="mt-4">
+         <p class="product-desc">{1_product_desc}</p>
+       </div>
      </center>
-     <span>{1_product_desc}</span>
      </div>
     </div>
     <div class="col">
       <div class="p-3 border bg-light"><center>
-         {2_Name}<br><a href="/product/{2_product_id}/"><img src="/images/{2_image_path}"></a>
+         <div class="product-title">{2_Name}</div>
+         <a href="/product/{2_product_id}/"><img src="/images/{2_image_path}" class="product-thumbnail"></a>
+         <div class="mt-4">
+           <p class="product-desc">{2_product_desc}</p>
+         </div>
        </center>
-       <span>{2_product_desc}</span>
       </div>
     </div>
     <div class="col">
       <div class="p-3 border bg-light"><center>
-         {3_Name}<br><a href="/product/{3_product_id}/"><img src="/images/{3_image_path}"></a>
+         <div class="product-title">{3_Name}</div>
+         <a href="/product/{3_product_id}/"><img src="/images/{3_image_path}" class="product-thumbnail"></a>
+         <div class="mt-4">
+           <p class="product-desc">{3_product_desc}</p>
+         </div>
        </center>
-       <span>{3_product_desc}</span>
       </div>
     </div>
   </div>
@@ -91,23 +127,32 @@
     <div class="col">
      <div class="p-3 border bg-light">
     <center>
-       {4_Name}<br><a href="/product/{4_product_id}/"><img src="/images/{4_image_path}"></a>
+       <div class="product-title">{4_Name}</div>
+       <a href="/product/{4_product_id}/"><img src="/images/{4_image_path}" class="product-thumbnail"></a>
+       <div class="mt-4">
+         <p class="product-desc">{4_product_desc}</p>
+       </div>
      </center>
-     <span>{4_product_desc}</span>
      </div>
     </div>
     <div class="col">
       <div class="p-3 border bg-light"><center>
-         {5_Name}<br><a href="/product/{5_product_id}/"><img src="/images/{5_image_path}"></a>
+         <div class="product-title">{5_Name}</div>
+         <a href="/product/{5_product_id}/"><img src="/images/{5_image_path}" class="product-thumbnail"></a>
+         <div class="mt-4">
+           <p class="product-desc">{5_product_desc}</p>
+         </div>
        </center>
-       <span>{5_product_desc}</span>
       </div>
     </div>
     <div class="col">
       <div class="p-3 border bg-light"><center>
-         {6_Name}<br><a href="/product/{6_product_id}/"><img src="/images/{6_image_path}"></a>
+         <div class="product-title">{6_Name}</div>
+         <a href="/product/{6_product_id}/"><img src="/images/{6_image_path}" class="product-thumbnail"></a>
+         <div class="mt-4">
+           <p class="product-desc">{6_product_desc}</p>
+         </div>
        </center>
-       <span>{6_product_desc}</span>
       </div>
     </div>
   </div>

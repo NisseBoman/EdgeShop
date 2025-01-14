@@ -1,256 +1,384 @@
 //! Default Compute@Edge template program.
 /// <reference types="@fastly/js-compute" />
 
-
-// import { CacheOverride } from "fastly:cache-override";
-// import { Logger } from "fastly:logger";
+// Import only what's needed
 import { includeBytes } from "fastly:experimental";
-//import { get } from "http";
-import { CacheOverride } from "fastly:cache-override";
-//import { Console } from "console";
 import { KVStore } from "fastly:kv-store";
-// Import the SimpleCache features
-import { SimpleCache } from 'fastly:cache';
 
+// Load static files once at compile time
+const PAGES = {
+  product: includeBytes("./src/product.html"),
+  index: includeBytes("./src/index.html"),
+  allProducts: includeBytes("./src/products.html"),
+  about: includeBytes("./src/about.html"),
+  cart: includeBytes("./src/cart.html")
+};
 
-// Load a static file as a Uint8Array at compile time.
-// File path is relative to root of project, not to this file
-let ProductPage = includeBytes("./src/product.html");
-let IndexPage = includeBytes("./src/index.html");  
-let AllProductsPage = includeBytes("./src/products.html");
+// Cache common headers
+const COMMON_HEADERS = {
+  "Content-Type": "text/html; charset=utf-8",
+  "Cache-Control": "public, max-age=432000"
+};
 
-const myHeaders = new Headers();
-myHeaders.append('CLIENT_SECRET', '241D9EF8EEDFEC7B2D8E213C9DE61');
-myHeaders.append('ACCESS_TOKEN', '13C13122AE89B7E67C7A17DBF6FCA');
-myHeaders.append('content-type', 'application/json; charset=utf-8');
-myHeaders.append('Accept-Encoding','gzip, deflate, br');
-myHeaders.append('Accept', 'application/json');
-myHeaders.append('user-agent', 'curl/7.21.0 (x86_64-pc-linux-gnu) libcurl/7.22.0 OpenSSL/1.0.1 zlib/1.2.3.4 libidn/1.23 librtmp/2.3');
-//myHeaders.append('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36');
+const IMAGE_HEADERS = ext => ({
+  "Content-Type": `image/${ext}`,
+  "Cache-Control": "public, max-age=432000"
+});
 
+// Create response helper
+const createResponse = (body, status = 200, headers = COMMON_HEADERS) => {
+  return new Response(body, {
+    status,
+    headers: new Headers(headers)
+  });
+};
 
-// The entry point for your application.
-//
-// Use this fetch event listener to define your main request handling logic. It could be
-// used to route based on the request properties (such as method or path), send
-// the request to a backend, make completely new requests, and/or generate
-// synthetic responses.
+// Helper function to parse cart cookie
+function parseCart(cookie) {
+  try {
+    return cookie ? JSON.parse(decodeURIComponent(cookie)) : {};
+  } catch (e) {
+    return {};
+  }
+}
 
-addEventListener("fetch", (event) => event.respondWith(handleRequest(event)));
+// Helper function to calculate cart totals
+function calculateTotals(cart, products) {
+  const subtotal = Object.entries(cart).reduce((sum, [id, qty]) => {
+    const product = products.Products.find(p => p.ProductId === parseInt(id));
+    return sum + (product ? product.ProductPrice * qty : 0);
+  }, 0);
+  
+  const vat = subtotal * 0.25;
+  const shipping = 10;
+  const total = subtotal + vat + shipping;
+  
+  return {
+    subtotal: subtotal.toFixed(2),
+    vat: vat.toFixed(2),
+    total: total.toFixed(2)
+  };
+}
+
+// Create a template cache helper
+const replaceTemplateVars = (content, replacements) => {
+  return Object.entries(replacements).reduce((acc, [key, value]) => 
+    acc.replace(new RegExp(key, 'g'), value), content);
+};
+
+// Move cart cookie handling to a separate function
+const handleCartCookie = (cart) => {
+  return {
+    'Location': '/cart',
+    'Set-Cookie': `cart=${encodeURIComponent(JSON.stringify(cart))}; Max-Age=600; Path=/`
+  };
+};
+
+// Consolidate common cart response logic
+const createCartResponse = (headers) => {
+  return new Response('', {
+    status: 302,
+    headers: new Headers(headers)
+  });
+};
+
+// Create a route handler map and handler functions
+async function handleHome(store) {
+  try {
+    const items = await store.get('Items');
+    if (!items) throw new NotFoundError("Products not found");
+    
+    const products = await items.json();
+    let content = new TextDecoder().decode(PAGES.index);
+    
+    // Replace template variables for each product
+    const replacements = {};
+    products.Products.forEach((product, index) => {
+      replacements[`{${index + 1}_Name}`] = product.ProductName;
+      replacements[`{${index + 1}_product_id}`] = product.ProductId;
+      replacements[`{${index + 1}_image_path}`] = product.ProductImage;
+      replacements[`{${index + 1}_product_desc}`] = product.ProductDesc;
+    });
+    
+    return createResponse(replaceTemplateVars(content, replacements));
+  } catch (err) {
+    return handleError(err);
+  }
+}
+
+async function handleProducts(store) {
+  try {
+    const items = await store.get('Items');
+    if (!items) throw new NotFoundError("Products not found");
+    
+    const products = await items.json();
+    let content = new TextDecoder().decode(PAGES.allProducts);
+    
+    const productListHtml = products.Products.map(product => `
+      <div class="col-md-4 mb-4">
+        <div class="card">
+          <img src="/images/${product.ProductImage}" class="card-img-top" alt="${product.ProductName}">
+          <div class="card-body">
+            <h5 class="card-title">${product.ProductName}</h5>
+            <p class="card-text">${product.ProductDesc}</p>
+            <p class="card-text"><strong>Price: $${product.ProductPrice.toFixed(2)}</strong></p>
+            <a href="/product/${product.ProductId}/" class="btn btn-primary">View Details</a>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    
+    content = content.replace('{all_json}', productListHtml);
+    return createResponse(content);
+  } catch (err) {
+    return handleError(err);
+  }
+}
+
+async function handleAbout() {
+  try {
+    let content = new TextDecoder().decode(PAGES.about);
+    return createResponse(content);
+  } catch (err) {
+    return handleError(err);
+  }
+}
+
+async function handleCart(store, req) {
+  try {
+    const cartCookie = req.headers.get('cookie')?.match(/cart=([^;]+)/)?.[1] || '';
+    let cart = parseCart(cartCookie);
+    
+    const items = await store.get('Items');
+    if (!items) throw new NotFoundError("Products not found");
+    
+    const products = await items.json();
+    let content = new TextDecoder().decode(PAGES.cart);
+    
+    const cartItemsHtml = Object.entries(cart)
+      .map(([id, qty]) => {
+        const product = products.Products.find(p => p.ProductId === parseInt(id));
+        if (!product) return '';
+        
+        return createCartItemHtml(product, qty);
+      })
+      .filter(Boolean)
+      .join('');
+    
+    const totals = calculateTotals(cart, products);
+    
+    content = replaceTemplateVars(content, {
+      '{CART_ITEMS}': cartItemsHtml || '<p>Your cart is empty</p>',
+      '{SUBTOTAL}': totals.subtotal,
+      '{VAT}': totals.vat,
+      '{TOTAL}': totals.total
+    });
+    
+    return new Response(content, {
+      status: 200,
+      headers: new Headers({
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+      })
+    });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+
+const routeHandlers = {
+  '/': handleHome,
+  '/products': handleProducts,
+  '/about': handleAbout,
+  '/cart': handleCart
+};
+
+// Create custom error classes
+class NotFoundError extends Error {
+  constructor(message = "Not found") {
+    super(message);
+    this.status = 404;
+  }
+}
+
+// Create error handler
+const handleError = (err) => {
+  console.error(err);
+  if (err instanceof NotFoundError) {
+    return createResponse(err.message, err.status);
+  }
+  return createResponse("Internal server error", 500);
+};
+
+// Move cart item template to a separate function
+const createCartItemHtml = (product, qty) => `
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-2">
+          <img src="/images/${product.ProductImage}" class="img-fluid rounded" alt="${product.ProductName}">
+        </div>
+        <div class="col-md-5">
+          <h5>${product.ProductName}</h5>
+        </div>
+        <div class="col-md-5">
+          <div class="d-flex justify-content-between align-items-center">
+            <form method="POST" action="/cart/update/${product.ProductId}" 
+              class="d-flex align-items-center" onsubmit="return false;">
+              <label class="me-2">Qty:</label>
+              <input type="number" name="quantity" value="${qty}" min="0" max="99" 
+                class="form-control form-control-sm" style="width: 70px;"
+                onchange="this.form.submit()">
+            </form>
+            <span>$${(product.ProductPrice * qty).toFixed(2)}</span>
+            <form method="POST" action="/cart/update/${product.ProductId}" 
+              class="ms-3" onsubmit="return confirm('Remove this item from cart?');">
+              <input type="hidden" name="quantity" value="0">
+              <button type="submit" class="btn btn-link text-danger p-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                  <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                </svg>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
+const CACHE_HEADERS = {
+  public: { "Cache-Control": "public, max-age=432000" },
+  private: { "Cache-Control": "private, no-cache" },
+  none: {
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0"
+  }
+};
+
+addEventListener("fetch", event => event.respondWith(handleRequest(event)));
 
 async function handleRequest(event) {
+  const req = event.request;
   
-  // Get the client request.
-  let req = event.request;
-
-  // Filter requests that have unexpected methods.
-  if (!["HEAD", "GET", "PURGE"].includes(req.method)) {
-    return new Response("This method is not allowed", {
-      status: 405,
-    });
+  if (!["HEAD", "GET", "PURGE", "POST"].includes(req.method)) {
+    return createResponse("Method not allowed", 405);
   }
 
-  let url = new URL(req.url);
+  const url = new URL(req.url);
+  const store = new KVStore("EdgeStoreItems");
 
-  if (url.pathname.startsWith("/images/"))
-  {
-    // Get the filename requested
-    var filename = url.pathname.replace(/^.*(\\|\/|\:)/, '');
-
- 
-    const store = new KVStore("EdgeStoreItems");
-
-
-    const Items = await store.get(filename);
-    const Products = await Items.body;
-    var ext = filename.substr(filename.lastIndexOf('.') + 1);
-
-    if (Items == false)
-    {
-      return new Response("The page you requested could not be found", {
-        status: 404,
-      });
+  // Check for direct route match first
+  const handler = routeHandlers[url.pathname];
+  if (handler) {
+    try {
+      return await handler(store, req);
+    } catch (err) {
+      return handleError(err);
     }
-    return new Response(Products, {
-      status: 200,
-      headers: new Headers({ "Content-Type": "image/"+ ext + " charset=utf-8", "xCache-Control": "public, max-age=432000" }),
-    });
-
   }
 
-  // If request is to the `/` path...
-  if (url.pathname == "/") {
-     
-    // Fetch the "products" from KV-store
-    const store = new KVStore("EdgeStoreItems");
-    const Items = await store.get('Items');
-    const Products = await Items.json();
-
-
-   
-    //console.log("json: " + Products.Products[0]['ProductName']);
-
-    var tmpstring = new TextDecoder().decode(IndexPage);
-
-   
-
-    var tmpProductString = '';
-    var i = 1;
-    // Loop the items in the response from KV-store
-    for (var itemz of Products.Products)
-    {
-      console.log(itemz.ProductName);
-
-
-      tmpstring = tmpstring.replace("{" + i + "_Name}", itemz.ProductName);
-      tmpstring = tmpstring.replace("{" + i + "_product_id}", itemz.ProductId);
-      tmpstring = tmpstring.replace("{" + i + "_image_path}",itemz.ProductImage);
-      tmpstring = tmpstring.replace("{" + i + "_product_desc}",itemz.ProductDesc);
-      i++;  
+  // Then check pattern matches
+  if (url.pathname.startsWith('/cart')) {
+    const cartCookie = req.headers.get('cookie')?.match(/cart=([^;]+)/)?.[1] || '';
+    let cart = parseCart(cartCookie);
+    
+    // Handle adding to cart
+    const addMatch = url.pathname.match(/^\/cart\/add\/(\d+)/);
+    if (addMatch && req.method === 'POST') {
+      const productId = addMatch[1];
+      const text = await req.text();
+      const params = new URLSearchParams(text);
+      const quantity = parseInt(params.get('quantity')) || 1;
+      
+      cart[productId] = (cart[productId] || 0) + quantity;
+      
+      return createCartResponse(handleCartCookie(cart));
     }
-
-    tmpstring = tmpstring.replace("{JSON}",JSON.stringify(Products));
-
-    return new Response(tmpstring, {
-      status: 200,
-      headers: new Headers({ "Content-Type": "text/html; charset=utf-8", "xCache-Control": "public, max-age=432000" }),
-    });
-
-
-
-    /* OLD STUFF
-    let cacheOverride = new CacheOverride('override', {ttl: 120});
-
-    const response = await fetch('https://api.vin-spritlagret.se/product/618/', {
-      backend: "Host_1",
-      headers: myHeaders,
-      method: "GET",
-      cacheOverride
-    });
     
-    //let product1 = await response.json(); //TODO: Write a catcher and output error 
-    console.log("output", response.body);
-
-    const response2 = await fetch('https://api.vin-spritlagret.se/product/1021/', {
-      backend: "Host_1",
-      headers: myHeaders,
-      method: "GET",
-      cacheOverride
-    });
-    let product2 = await response2.json(); 
-
-    const response3 = await fetch('https://api.vin-spritlagret.se/product/4868/', {
-      backend: "Host_1",
-      headers: myHeaders,
-      method: "GET",
-      cacheOverride
-    });
-    let product3 = await response3.json(); 
-
-    
-    console.log(body.Products.title);
-    
-    var tmpstring = new TextDecoder().decode(IndexPage);
-
-    tmpstring = tmpstring.replace("{1_Name}", product1.Products.title);
-    tmpstring = tmpstring.replace("{1_product_id}", product1.Products.id);
-    tmpstring = tmpstring.replace("{1_image_path}",product1.Products.image);
-
-    tmpstring = tmpstring.replace("{2_Name}", product2.Products.title);
-    tmpstring = tmpstring.replace("{2_product_id}", product2.Products.id);
-    tmpstring = tmpstring.replace("{2_image_path}",product2.Products.image);
-
-    tmpstring = tmpstring.replace("{3_Name}", product3.Products.title);
-    tmpstring = tmpstring.replace("{3_product_id}", product3.Products.id);
-    tmpstring = tmpstring.replace("{3_image_path}",product3.Products.image);
-
-    tmpstring = tmpstring.replace("{JSON}",JSON.stringify(product1));
-    */
-
-    
-    // Send a default synthetic response.
-    return new Response(tmpstring, {
-      status: 200,
-      headers: new Headers({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=432000" }),
-    });
+    // Handle updating cart quantities
+    const updateMatch = url.pathname.match(/^\/cart\/update\/(\d+)/);
+    if (updateMatch && req.method === 'POST') {
+      const productId = updateMatch[1];
+      const text = await req.text();
+      const params = new URLSearchParams(text);
+      const quantity = parseInt(params.get('quantity')) || 0;
+      
+      if (quantity > 0) {
+        cart[productId] = quantity;
+      } else {
+        delete cart[productId];
+      }
+      
+      return createCartResponse(handleCartCookie(cart));
+    }
   }
 
-  /*
-  if (url.pathname.startsWith("/products")) {
-    
-    let cacheOverride = new CacheOverride('override', {ttl: 120});
+  if (url.pathname.startsWith('/product/')) {
+    try {
+      const productMatch = url.pathname.match(/^\/product\/(\d+)\/?$/);
+      if (productMatch) {
+        const productId = parseInt(productMatch[1]);
+        const items = await store.get('Items');
+        
+        if (!items) {
+          return createResponse("Products not found", 404);
+        }
 
-    const response = await fetch('https://api.vin-spritlagret.se/product/', {
-      backend: "Host_1",
-      headers: myHeaders,
-      method: "GET",
-      cacheOverride
-    });
-    let AllProducts = await response.json();
+        const products = await items.json();
+        const product = products.Products.find(p => p.ProductId === productId);
+        
+        if (!product) {
+          return createResponse("Product not found", 404);
+        }
 
+        let content = new TextDecoder().decode(PAGES.product);
+        
+        // Replace product template variables
+        const replacements = {
+          "{Product_Title}": product.ProductName,
+          "{Product_image_path}": product.ProductImage,
+          "{Product_Description}": product.ProductDesc,
+          "{Product_Price}": product.ProductPrice.toFixed(2),
+          "{Product_Id}": product.ProductId,
+          "{JSON}": JSON.stringify(product)
+        };
 
-    var tmpstring = new TextDecoder().decode(AllProductsPage);
-    tmpstring = tmpstring.replace("{all_json}",JSON.stringify(AllProducts));
-    
-    
-    // Send a default synthetic response.
-    return new Response(tmpstring, {
-      status: 200,
-      headers: new Headers({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=432000" }),
-    });
+        content = replaceTemplateVars(content, replacements);
+        return createResponse(content);
 
-  }*/
-
-  /*
-  if (url.pathname.startsWith("/product/")) {
-    let tmpproductid =url.pathname.replace(/[^0-9]/g, '');
-    console.log("requestd id: " + tmpproductid);
-
-    let cacheOverride = new CacheOverride('override', {ttl: 120});
-
-    const response = await fetch('https://api.vin-spritlagret.se/product/' + tmpproductid +'/', {
-      backend: "Host_1",
-      headers: myHeaders,
-      method: "GET",
-      cacheOverride
-    });
-
-    const product = await response.json();
-    //const product = await response.body(); 
-    
-    //console.log(Object.fromEntries(response.headers()));
-
-    //console.log(body.Products.title);
-    
-    for (var i=0; i < Object.keys (body.Products).length; i++) {
-      console.log(body[i]);
-
+      }
+    } catch (err) {
+      console.error("Error processing product view:", err);
+      return createResponse("Error processing product request", 500);
     }
-    for (var prod of body.Products)
-    {
-      console.log(prod.product_title);
+  }
+
+  // Handle image requests
+  if (url.pathname.startsWith("/images/")) {
+    const filename = url.pathname.replace(/^.*(\\|\/|\:)/, '');
+    const ext = filename.split('.').pop();
+    
+    try {
+      const item = await store.get(filename);
+      if (!item) {
+        return createResponse("Image not found", 404);
+      }
+      return createResponse(
+        await item.body,
+        200,
+        IMAGE_HEADERS(ext)
+      );
+    } catch (err) {
+      console.error(`Error fetching image ${filename}:`, err);
+      return createResponse("Error processing image", 500);
     }
-    
-  
-    
-    var tmpstring = new TextDecoder().decode(ProductPage);
+  }
 
-    tmpstring = tmpstring.replaceAll("{Product_Title}", product.Products.title);
-    
-    tmpstring = tmpstring.replace("{Product_image_path}",product.Products.image);
-    tmpstring = tmpstring.replace("{Product_Description}", product.Products.description_character);
-    tmpstring = tmpstring.replace("{JSON}",JSON.stringify(product));
-    
-    
-    // Send a default synthetic response.
-    return new Response(tmpstring, {
-      status: 200,
-      headers: new Headers({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=432000" }),
-    });
-  }*/
-
-  // Catch all other requests and return a 404.
-  return new Response("The page you requested could not be found", {
-    status: 404,
-  });
+  // Default 404 response
+  return createResponse("Page not found", 404);
 }
