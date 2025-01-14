@@ -115,14 +115,20 @@ async function handleProducts(store) {
     let content = new TextDecoder().decode(PAGES.allProducts);
     
     const productListHtml = products.Products.map(product => `
-      <div class="col-md-4 mb-4">
-        <div class="card">
-          <img src="/images/${product.ProductImage}" class="card-img-top" alt="${product.ProductName}">
-          <div class="card-body">
-            <h5 class="card-title">${product.ProductName}</h5>
-            <p class="card-text">${product.ProductDesc}</p>
-            <p class="card-text"><strong>Price: $${product.ProductPrice.toFixed(2)}</strong></p>
-            <a href="/product/${product.ProductId}/" class="btn btn-primary">View Details</a>
+      <div class="product-list-item p-4">
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <img src="/images/${product.ProductImage}" class="product-image" alt="${product.ProductName}">
+          </div>
+          <div class="col">
+            <h3 class="product-title mb-2">${product.ProductName}</h3>
+            <p class="mb-2">${product.ProductDesc}</p>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="product-price">$${product.ProductPrice.toFixed(2)}</span>
+              <div>
+                <a href="/product/${product.ProductId}/" class="btn btn-primary">View Details</a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
