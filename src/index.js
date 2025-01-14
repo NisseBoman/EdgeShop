@@ -50,12 +50,13 @@ function calculateTotals(cart, products) {
   }, 0);
   
   const vat = subtotal * 0.25;
-  const shipping = 10;
+  const shipping = subtotal >= 500 ? 0 : 10;
   const total = subtotal + vat + shipping;
   
   return {
     subtotal: subtotal.toFixed(2),
     vat: vat.toFixed(2),
+    shipping: shipping.toFixed(2),
     total: total.toFixed(2)
   };
 }
@@ -177,7 +178,11 @@ async function handleCart(store, req) {
       '{CART_ITEMS}': cartItemsHtml || '<p>Your cart is empty</p>',
       '{SUBTOTAL}': totals.subtotal,
       '{VAT}': totals.vat,
-      '{TOTAL}': totals.total
+      '{SHIPPING}': totals.shipping,
+      '{TOTAL}': totals.total,
+      '{FREE_SHIPPING_MESSAGE}': parseFloat(totals.subtotal) >= 500 ? 
+        '<div class="alert alert-success mb-2 py-2">✨ Free shipping applied!</div>' : 
+        '<div class="text-muted small mb-2">Free shipping on orders over $500</div>'
     });
     
     return new Response(content, {
