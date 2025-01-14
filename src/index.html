@@ -13,21 +13,141 @@
     />
     <title>Welcome to the EdgeShop</title>
     <style>
-      .product-thumbnail {
-        max-width: 200px;
-        height: auto;
+      :root {
+        --fastly-blue: #FF282D;
+        --fastly-dark: #1A1A1A;
+        --fastly-light: #F7F7F7;
+        --fastly-text: #4A4A4A;
+        --fastly-border: #E5E5E5;
+        --fastly-link: #0055FF;
       }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--fastly-text);
+        background-color: var(--fastly-light);
+      }
+      
+      .product-thumbnail {
+        max-width: 100%;
+        height: auto;
+        transition: transform 0.2s;
+      }
+      
+      .product-card {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        background: white;
+        border: 1px solid var(--fastly-border);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      
+      .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      }
+      
       .product-desc {
         font-size: 0.9rem;
         line-height: 1.4;
-        margin: 0 10px;
-        color: #666;
+        margin: 1rem 0;
+        color: var(--fastly-text);
       }
+      
       .product-title {
         font-size: 1.75rem;
         font-weight: 700;
         margin-bottom: 1rem;
-        color: #333;
+        color: var(--fastly-dark);
+      }
+      
+      .price-tag {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--fastly-blue);
+      }
+      
+      .btn-primary {
+        background: var(--fastly-blue);
+        border-color: var(--fastly-blue);
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+      }
+      
+      .btn-primary:hover {
+        background: #E61E23;
+        border-color: #E61E23;
+      }
+      
+      .navbar {
+        background: white !important;
+        border-bottom: 1px solid var(--fastly-border);
+      }
+      
+      .navbar-brand {
+        font-weight: 700;
+        color: var(--fastly-dark) !important;
+      }
+      
+      .nav-link {
+        font-weight: 500;
+        color: var(--fastly-text) !important;
+      }
+      
+      .nav-link:hover {
+        color: var(--fastly-blue) !important;
+      }
+      
+      .nav-link.active {
+        color: var(--fastly-blue) !important;
+      }
+      
+      .container {
+        max-width: 1200px;
+        padding: 0 2rem;
+      }
+      
+      .card {
+        border: 1px solid var(--fastly-border);
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      }
+      
+      .card-title {
+        color: var(--fastly-dark);
+      }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      
+      .product-card {
+        animation: fadeIn 0.5s ease-out;
+      }
+      
+      .btn-primary {
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .btn-primary::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 120%;
+        height: 120%;
+        background: rgba(255,255,255,0.2);
+        transform: translate(-50%, -50%) scale(0);
+        border-radius: 50%;
+        transition: transform 0.5s;
+      }
+      
+      .btn-primary:active::after {
+        transform: translate(-50%, -50%) scale(1);
       }
     </style>
 
@@ -35,8 +155,13 @@
   </head>
   <body>
     <nav class="navbar navbar-expand-lg bg-light">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="#"><img src="https://getbootstrap.com/docs/5.2/assets/brand/bootstrap-logo.svg" alt="" width="30" height="24" class="d-inline-block align-text-top">&nbsp;EdgeShop</a>
+      <div class="container">
+        <a class="navbar-brand" href="#">
+          <div class="d-flex align-items-center">
+            <img src="https://getbootstrap.com/docs/5.2/assets/brand/bootstrap-logo.svg" alt="" width="30" height="24" class="d-inline-block me-2">
+            <span class="fw-bold">Edge<span class="text-primary">Shop</span></span>
+          </div>
+        </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>

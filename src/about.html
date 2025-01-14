@@ -7,11 +7,93 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title>EdgeShop - About Us</title>
+    <style>
+      :root {
+        --fastly-blue: #FF282D;
+        --fastly-dark: #1A1A1A;
+        --fastly-light: #F7F7F7;
+        --fastly-text: #4A4A4A;
+        --fastly-border: #E5E5E5;
+        --fastly-link: #0055FF;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--fastly-text);
+        background-color: var(--fastly-light);
+      }
+      
+      .navbar {
+        background: white !important;
+        border-bottom: 1px solid var(--fastly-border);
+      }
+      
+      .navbar-brand {
+        font-weight: 700;
+        color: var(--fastly-dark) !important;
+      }
+      
+      .nav-link {
+        font-weight: 500;
+        color: var(--fastly-text) !important;
+      }
+      
+      .nav-link:hover {
+        color: var(--fastly-blue) !important;
+      }
+      
+      .nav-link.active {
+        color: var(--fastly-blue) !important;
+      }
+      
+      .container {
+        max-width: 1200px;
+        padding: 0 2rem;
+      }
+      
+      .display-4 {
+        color: var(--fastly-dark);
+        font-weight: 700;
+      }
+      
+      .card {
+        border: 1px solid var(--fastly-border);
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        background: white;
+      }
+      
+      .about-section {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid var(--fastly-border);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 2rem;
+        margin-bottom: 2rem;
+      }
+      
+      .about-section h2 {
+        color: var(--fastly-dark);
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+      }
+      
+      .about-section p {
+        color: var(--fastly-text);
+        line-height: 1.6;
+        margin-bottom: 1rem;
+      }
+    </style>
   </head>
   <body>
     <nav class="navbar navbar-expand-lg bg-light">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="/"><img src="https://getbootstrap.com/docs/5.2/assets/brand/bootstrap-logo.svg" alt="" width="30" height="24" class="d-inline-block align-text-top">&nbsp;EdgeShop</a>
+      <div class="container">
+        <a class="navbar-brand" href="/">
+          <div class="d-flex align-items-center">
+            <img src="https://getbootstrap.com/docs/5.2/assets/brand/bootstrap-logo.svg" alt="" width="30" height="24" class="d-inline-block me-2">
+            <span class="fw-bold">Edge<span class="text-primary">Shop</span></span>
+          </div>
+        </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
@@ -27,41 +109,56 @@
               <a class="nav-link active" aria-current="page" href="/about">About us</a>
             </li>
           </ul>
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="/cart">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart" viewBox="0 0 16 16">
+                  <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l1.313 7h8.17l1.313-7H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                </svg>
+              </a>
+            </li>
+          </ul>
         </div>
       </div>
     </nav>
 
     <div class="container mt-5">
-      <div class="row justify-content-center">
-        <div class="col-md-8">
-          <div class="card">
-            <div class="card-body">
-              <h1 class="card-title text-center mb-4">About EdgeShop</h1>
-              <p class="lead">
-                Welcome to EdgeShop - a demo project showcasing the power of Fastly's Compute@Edge platform!
-              </p>
-              <p>
-                This demo site was created by Nils Boman, a Sales Engineer at Fastly. It serves as a playground 
-                to demonstrate the capabilities of edge computing and how it can be used to build fast, 
-                responsive e-commerce applications.
-              </p>
-              <p>
-                As a Sales Engineer at Fastly, Nils is passionate about showing how edge computing can 
-                transform the way we build and deliver web applications. This project is just for fun and 
-                educational purposes, showcasing various features like:
-              </p>
-              <ul class="list-group list-group-flush mt-3 mb-3">
-                <li class="list-group-item">Edge-based routing and processing</li>
-                <li class="list-group-item">Dynamic content generation at the edge</li>
-                <li class="list-group-item">Image optimization and delivery</li>
-                <li class="list-group-item">Fast, responsive user experiences</li>
-              </ul>
-              <p class="text-muted mt-4">
-                <small>Note: This is a demo site and not a real e-commerce platform. All products and prices are fictional.</small>
-              </p>
-            </div>
-          </div>
-        </div>
+      <h1 class="display-4 mb-4">About Us</h1>
+      
+      <div class="about-section">
+        <h2>Our Story</h2>
+        <p>
+          EdgeShop is a demonstration e-commerce platform built on Fastly's Compute@Edge, showcasing the power 
+          of edge computing in modern web applications. Our platform demonstrates how to build fast, secure, 
+          and scalable shopping experiences using cutting-edge technology.
+        </p>
+      </div>
+      
+      <div class="about-section">
+        <h2>Technology Stack</h2>
+        <p>
+          Built with:
+        </p>
+        <ul>
+          <li>Fastly Compute@Edge for edge computing</li>
+          <li>Bootstrap for responsive design</li>
+          <li>Modern JavaScript for dynamic functionality</li>
+          <li>KV Store for data management</li>
+        </ul>
+      </div>
+      
+      <div class="about-section">
+        <h2>Features</h2>
+        <p>
+          Our platform includes:
+        </p>
+        <ul>
+          <li>Dynamic product catalog</li>
+          <li>Shopping cart functionality</li>
+          <li>Real-time price calculations</li>
+          <li>Responsive design for all devices</li>
+          <li>Fast image delivery with proper caching</li>
+        </ul>
       </div>
     </div>
   </body>

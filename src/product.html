@@ -7,6 +7,36 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title>EdgeShop - {Product_Title}</title>
+    <style>
+      :root {
+        --fastly-blue: #FF282D;
+        --fastly-dark: #1A1A1A;
+        --fastly-light: #F7F7F7;
+        --fastly-text: #4A4A4A;
+        --fastly-border: #E5E5E5;
+        --fastly-link: #0055FF;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--fastly-text);
+        background-color: var(--fastly-light);
+      }
+      
+      h1 {
+        color: var(--fastly-dark);
+        font-weight: 700;
+      }
+      
+      .price-display {
+        background: white;
+        border: 1px solid var(--fastly-border);
+      }
+      
+      .text-primary {
+        color: var(--fastly-blue) !important;
+      }
+    </style>
   </head>
   <body>
     <nav class="navbar navbar-expand-lg bg-light">
@@ -42,19 +72,25 @@
 
     <div class="container mt-5">
       <div class="row">
-        <div class="col-md-6">
-          <img src="/images/{Product_image_path}" class="img-fluid rounded" alt="{Product_Title}">
+        <div class="col-lg-7">
+          <div class="position-sticky" style="top: 2rem;">
+            <img src="/images/{Product_image_path}" class="img-fluid rounded-4 shadow-lg" alt="{Product_Title}">
+          </div>
         </div>
-        <div class="col-md-6">
-          <h1>{Product_Title}</h1>
-          <p class="lead">{Product_Description}</p>
-          <h3 class="mt-4">Price: ${Product_Price}</h3>
-          <form method="POST" action="/cart/add/{Product_Id}">
-            <div class="input-group mb-3" style="max-width: 200px;">
-              <input type="number" class="form-control" name="quantity" value="1" min="1" max="99">
-              <button class="btn btn-primary" type="submit">Add to Cart</button>
+        <div class="col-lg-5">
+          <div class="ps-lg-4">
+            <h1>{Product_Title}</h1>
+            <p class="lead text-muted mb-4">{Product_Description}</p>
+            <div class="price-display p-4 bg-light rounded-3 mb-4">
+              <h3 class="mb-0 text-primary">$<span class="display-4">{Product_Price}</span></h3>
             </div>
-          </form>
+            <form method="POST" action="/cart/add/{Product_Id}">
+              <div class="input-group mb-3" style="max-width: 200px;">
+                <input type="number" class="form-control" name="quantity" value="1" min="1" max="99">
+                <button class="btn btn-primary" type="submit">Add to Cart</button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
 

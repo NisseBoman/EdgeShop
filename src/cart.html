@@ -16,6 +16,46 @@
         });
       });
     </script>
+    <style>
+      :root {
+        --fastly-blue: #FF282D;
+        --fastly-dark: #1A1A1A;
+        --fastly-light: #F7F7F7;
+        --fastly-text: #4A4A4A;
+        --fastly-border: #E5E5E5;
+        --fastly-link: #0055FF;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--fastly-text);
+        background-color: var(--fastly-light);
+      }
+      
+      .display-4 {
+        color: var(--fastly-dark);
+        font-weight: 700;
+      }
+      
+      .card {
+        border: 1px solid var(--fastly-border);
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      }
+      
+      .btn-primary {
+        background: var(--fastly-blue);
+        border-color: var(--fastly-blue);
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+      }
+      
+      .btn-primary:hover {
+        background: #E61E23;
+        border-color: #E61E23;
+      }
+    </style>
   </head>
   <body>
     <nav class="navbar navbar-expand-lg bg-light">
@@ -50,15 +90,15 @@
     </nav>
 
     <div class="container mt-5">
-      <h1>Shopping Cart</h1>
+      <h1 class="display-4 mb-4">Your Cart</h1>
       <div class="row">
         <div class="col-md-8">
           {CART_ITEMS}
         </div>
         <div class="col-md-4">
-          <div class="card">
+          <div class="card position-sticky" style="top: 2rem;">
             <div class="card-body">
-              <h5 class="card-title">Order Summary</h5>
+              <h5 class="card-title fw-bold mb-4">Order Summary</h5>
               <div class="d-flex justify-content-between mb-2">
                 <span>Subtotal:</span>
                 <span>${SUBTOTAL}</span>
@@ -76,7 +116,7 @@
                 <strong>Total:</strong>
                 <strong>${TOTAL}</strong>
               </div>
-              <button class="btn btn-primary w-100 mt-3">Proceed to Checkout</button>
+              <button class="btn btn-primary w-100 mt-3 py-3 fw-bold">Proceed to Checkout</button>
             </div>
           </div>
         </div>
