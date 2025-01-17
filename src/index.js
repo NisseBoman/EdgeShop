@@ -1,11 +1,19 @@
-//! Default Compute@Edge template program.
+/**
+ * EdgeShop - Main Application Entry Point
+ * A Fastly Compute@Edge e-commerce application that demonstrates edge computing capabilities
+ */
+
 /// <reference types="@fastly/js-compute" />
 
-// Import only what's needed
-import { includeBytes } from "fastly:experimental";
-import { KVStore } from "fastly:kv-store";
+// Import Fastly-specific modules
+import { includeBytes } from "fastly:experimental";  // For loading static files at compile time
+import { KVStore } from "fastly:kv-store";          // For key-value store operations
 
-// Load static files once at compile time
+/**
+ * Static HTML Templates
+ * Load all HTML templates at compile time for better performance
+ * These templates contain placeholders that will be replaced with dynamic content
+ */
 const PAGES = {
   product: includeBytes("./src/product.html"),
   index: includeBytes("./src/index.html"),
@@ -14,18 +22,31 @@ const PAGES = {
   cart: includeBytes("./src/cart.html")
 };
 
-// Cache common headers
+/**
+ * Common Response Headers
+ * Define reusable header configurations for different content types
+ */
 const COMMON_HEADERS = {
   "Content-Type": "text/html; charset=utf-8",
-  "Cache-Control": "public, max-age=432000"
+  "Cache-Control": "public, max-age=432000"  // Cache for 5 days
 };
 
+/**
+ * Image Response Headers Generator
+ * Creates appropriate headers for image responses based on file extension
+ */
 const IMAGE_HEADERS = ext => ({
   "Content-Type": `image/${ext}`,
   "Cache-Control": "public, max-age=432000"
 });
 
-// Create response helper
+/**
+ * Response Creator Helper
+ * Standardizes response creation across the application
+ * @param {string|Uint8Array} body - Response body content
+ * @param {number} status - HTTP status code (default: 200)
+ * @param {Object} headers - Response headers (default: COMMON_HEADERS)
+ */
 const createResponse = (body, status = 200, headers = COMMON_HEADERS) => {
   return new Response(body, {
     status,
@@ -33,7 +54,11 @@ const createResponse = (body, status = 200, headers = COMMON_HEADERS) => {
   });
 };
 
-// Helper function to parse cart cookie
+/**
+ * Cart Cookie Parser
+ * Safely parses the cart cookie string into a JavaScript object
+ * Returns empty object if cookie is invalid or missing
+ */
 function parseCart(cookie) {
   try {
     return cookie ? JSON.parse(decodeURIComponent(cookie)) : {};
@@ -42,15 +67,23 @@ function parseCart(cookie) {
   }
 }
 
-// Helper function to calculate cart totals
+/**
+ * Cart Total Calculator
+ * Calculates various totals for the shopping cart including:
+ * - Subtotal
+ * - VAT (25%)
+ * - Shipping (free over $500)
+ * - Total
+ */
 function calculateTotals(cart, products) {
+  // Calculate subtotal by summing up (price * quantity) for each item
   const subtotal = Object.entries(cart).reduce((sum, [id, qty]) => {
     const product = products.Products.find(p => p.ProductId === parseInt(id));
     return sum + (product ? product.ProductPrice * qty : 0);
   }, 0);
   
-  const vat = subtotal * 0.25;
-  const shipping = subtotal >= 500 ? 0 : 10;
+  const vat = subtotal * 0.25;                    // 25% VAT
+  const shipping = subtotal >= 500 ? 0 : 10;      // Free shipping over $500
   const total = subtotal + vat + shipping;
   
   return {
@@ -61,21 +94,33 @@ function calculateTotals(cart, products) {
   };
 }
 
-// Create a template cache helper
+/**
+ * Template Variable Replacer
+ * Replaces placeholder variables in HTML templates with actual content
+ * Uses regex to replace all occurrences of each placeholder
+ */
 const replaceTemplateVars = (content, replacements) => {
   return Object.entries(replacements).reduce((acc, [key, value]) => 
     acc.replace(new RegExp(key, 'g'), value), content);
 };
 
-// Move cart cookie handling to a separate function
+/**
+ * Cart Cookie Handler
+ * Manages cart cookie creation and updates
+ * Sets appropriate headers for cart operations
+ */
 const handleCartCookie = (cart) => {
   return {
     'Location': '/cart',
-    'Set-Cookie': `cart=${encodeURIComponent(JSON.stringify(cart))}; Max-Age=600; Path=/`
+    'Set-Cookie': `cart=${encodeURIComponent(JSON.stringify(cart))}; Max-Age=600; Path=/`  // 10-minute expiry
   };
 };
 
-// Consolidate common cart response logic
+/**
+ * Cart Response Creator
+ * Creates a redirect response for cart operations
+ * Used after adding/updating cart items
+ */
 const createCartResponse = (headers) => {
   return new Response('', {
     status: 302,
@@ -83,16 +128,26 @@ const createCartResponse = (headers) => {
   });
 };
 
-// Create a route handler map and handler functions
+/**
+ * Route Handlers
+ * Each handler manages a specific route in the application
+ */
+
+/**
+ * Home Page Handler
+ * Renders the main landing page with featured products
+ * @param {KVStore} store - Key-value store instance for product data
+ */
 async function handleHome(store) {
   try {
+    // Fetch product data from KV store
     const items = await store.get('Items');
     if (!items) throw new NotFoundError("Products not found");
     
     const products = await items.json();
     let content = new TextDecoder().decode(PAGES.index);
     
-    // Replace template variables for each product
+    // Replace template variables for each featured product
     const replacements = {};
     products.Products.forEach((product, index) => {
       replacements[`{${index + 1}_Name}`] = product.ProductName;
@@ -107,14 +162,21 @@ async function handleHome(store) {
   }
 }
 
+/**
+ * Products Page Handler
+ * Renders the product listing page showing all available products
+ * @param {KVStore} store - Key-value store instance for product data
+ */
 async function handleProducts(store) {
   try {
+    // Fetch all products from KV store
     const items = await store.get('Items');
     if (!items) throw new NotFoundError("Products not found");
     
     const products = await items.json();
     let content = new TextDecoder().decode(PAGES.allProducts);
     
+    // Generate HTML for each product in the catalog
     const productListHtml = products.Products.map(product => `
       <div class="product-list-item p-4">
         <div class="row align-items-center">
@@ -142,6 +204,10 @@ async function handleProducts(store) {
   }
 }
 
+/**
+ * About Page Handler
+ * Renders the static about page
+ */
 async function handleAbout() {
   try {
     let content = new TextDecoder().decode(PAGES.about);
@@ -151,17 +217,26 @@ async function handleAbout() {
   }
 }
 
+/**
+ * Shopping Cart Handler
+ * Renders the cart page with current items and totals
+ * @param {KVStore} store - Key-value store instance for product data
+ * @param {Request} req - HTTP request object containing cart cookie
+ */
 async function handleCart(store, req) {
   try {
+    // Extract and parse cart cookie
     const cartCookie = req.headers.get('cookie')?.match(/cart=([^;]+)/)?.[1] || '';
     let cart = parseCart(cartCookie);
     
+    // Fetch product data to get details for cart items
     const items = await store.get('Items');
     if (!items) throw new NotFoundError("Products not found");
     
     const products = await items.json();
     let content = new TextDecoder().decode(PAGES.cart);
     
+    // Generate HTML for each cart item
     const cartItemsHtml = Object.entries(cart)
       .map(([id, qty]) => {
         const product = products.Products.find(p => p.ProductId === parseInt(id));
@@ -172,8 +247,10 @@ async function handleCart(store, req) {
       .filter(Boolean)
       .join('');
     
+    // Calculate cart totals
     const totals = calculateTotals(cart, products);
     
+    // Replace template variables with dynamic content
     content = replaceTemplateVars(content, {
       '{CART_ITEMS}': cartItemsHtml || '<p>Your cart is empty</p>',
       '{SUBTOTAL}': totals.subtotal,
@@ -185,6 +262,7 @@ async function handleCart(store, req) {
         '<div class="text-muted small mb-2">Free shipping on orders over $500</div>'
     });
     
+    // Return cart page with no-cache headers
     return new Response(content, {
       status: 200,
       headers: new Headers({
@@ -199,6 +277,10 @@ async function handleCart(store, req) {
   }
 }
 
+/**
+ * Route Handler Map
+ * Maps URL paths to their corresponding handler functions
+ */
 const routeHandlers = {
   '/': handleHome,
   '/products': handleProducts,
@@ -206,7 +288,10 @@ const routeHandlers = {
   '/cart': handleCart
 };
 
-// Create custom error classes
+/**
+ * Custom Error Classes
+ * Extends Error for specific HTTP error scenarios
+ */
 class NotFoundError extends Error {
   constructor(message = "Not found") {
     super(message);
@@ -214,7 +299,11 @@ class NotFoundError extends Error {
   }
 }
 
-// Create error handler
+/**
+ * Error Handler
+ * Centralizes error handling and creates appropriate error responses
+ * Logs errors for debugging while presenting user-friendly messages
+ */
 const handleError = (err) => {
   console.error(err);
   if (err instanceof NotFoundError) {
@@ -223,7 +312,11 @@ const handleError = (err) => {
   return createResponse("Internal server error", 500);
 };
 
-// Move cart item template to a separate function
+/**
+ * Cart Item HTML Generator
+ * Creates the HTML markup for a single cart item
+ * Includes product image, details, quantity controls, and remove button
+ */
 const createCartItemHtml = (product, qty) => `
   <div class="card mb-3">
     <div class="card-body">
@@ -271,125 +364,141 @@ const CACHE_HEADERS = {
   }
 };
 
-addEventListener("fetch", event => event.respondWith(handleRequest(event)));
+/**
+ * Main Request Handler
+ * Entry point for all incoming requests to the application
+ * @param {Request} req - The incoming HTTP request
+ */
+async function handleRequest(req) {
+  try {
+    // Initialize KV store connection
+    const store = new KVStore('products');
+    const url = new URL(req.url);
+    const path = url.pathname;
 
-async function handleRequest(event) {
-  const req = event.request;
-  
-  if (!["HEAD", "GET", "PURGE", "POST"].includes(req.method)) {
-    return createResponse("Method not allowed", 405);
-  }
-
-  const url = new URL(req.url);
-  const store = new KVStore("EdgeStoreItems");
-
-  // Check for direct route match first
-  const handler = routeHandlers[url.pathname];
-  if (handler) {
-    try {
-      return await handler(store, req);
-    } catch (err) {
-      return handleError(err);
+    // Handle cart operations (add/update/remove items)
+    if (path.startsWith('/cart/')) {
+      return handleCartOperation(req, store);
     }
-  }
 
-  // Then check pattern matches
-  if (url.pathname.startsWith('/cart')) {
+    // Handle product detail pages
+    if (path.startsWith('/product/')) {
+      return handleProductDetail(path, store);
+    }
+
+    // Handle static image requests
+    if (path.startsWith('/images/')) {
+      return handleImageRequest(path, store);
+    }
+
+    // Route to appropriate handler or return 404
+    const handler = routeHandlers[path];
+    if (handler) {
+      return handler(store, req);
+    }
+
+    throw new NotFoundError();
+  } catch (err) {
+    return handleError(err);
+  }
+}
+
+/**
+ * Product Detail Page Handler
+ * Renders the detailed view of a single product
+ * @param {string} path - Request path containing product ID
+ * @param {KVStore} store - Key-value store instance
+ */
+async function handleProductDetail(path, store) {
+  try {
+    // Extract product ID from URL
+    const productId = parseInt(path.split('/')[2]);
+    if (isNaN(productId)) throw new NotFoundError();
+
+    // Fetch product data
+    const items = await store.get('Items');
+    if (!items) throw new NotFoundError();
+
+    const products = await items.json();
+    const product = products.Products.find(p => p.ProductId === productId);
+    if (!product) throw new NotFoundError("Product not found");
+
+    // Prepare template replacements
+    let content = new TextDecoder().decode(PAGES.product);
+    const replacements = {
+      '{Product_Title}': product.ProductName,
+      '{Product_Description}': product.ProductDesc,
+      '{Product_Price}': product.ProductPrice.toFixed(2),
+      '{Product_image_path}': product.ProductImage,
+      '{Product_Id}': product.ProductId,
+      '{JSON}': JSON.stringify(product, null, 2)
+    };
+
+    return createResponse(replaceTemplateVars(content, replacements));
+  } catch (err) {
+    return handleError(err);
+  }
+}
+
+/**
+ * Cart Operation Handler
+ * Manages cart modifications (add/update/remove items)
+ * @param {Request} req - The incoming HTTP request
+ * @param {KVStore} store - Key-value store instance
+ */
+async function handleCartOperation(req, store) {
+  try {
+    if (req.method !== 'POST') {
+      return createResponse("Method not allowed", 405);
+    }
+
+    // Parse cart cookie and form data
     const cartCookie = req.headers.get('cookie')?.match(/cart=([^;]+)/)?.[1] || '';
     let cart = parseCart(cartCookie);
     
-    // Handle adding to cart
-    const addMatch = url.pathname.match(/^\/cart\/add\/(\d+)/);
-    if (addMatch && req.method === 'POST') {
-      const productId = addMatch[1];
-      const text = await req.text();
-      const params = new URLSearchParams(text);
-      const quantity = parseInt(params.get('quantity')) || 1;
-      
-      cart[productId] = (cart[productId] || 0) + quantity;
-      
-      return createCartResponse(handleCartCookie(cart));
+    const formData = await req.formData();
+    const quantity = parseInt(formData.get('quantity')) || 0;
+    const productId = req.url.split('/').pop();
+
+    // Update cart contents
+    if (quantity > 0) {
+      cart[productId] = Math.min(quantity, 99);  // Limit quantity to 99
+    } else {
+      delete cart[productId];  // Remove item if quantity is 0
     }
-    
-    // Handle updating cart quantities
-    const updateMatch = url.pathname.match(/^\/cart\/update\/(\d+)/);
-    if (updateMatch && req.method === 'POST') {
-      const productId = updateMatch[1];
-      const text = await req.text();
-      const params = new URLSearchParams(text);
-      const quantity = parseInt(params.get('quantity')) || 0;
-      
-      if (quantity > 0) {
-        cart[productId] = quantity;
-      } else {
-        delete cart[productId];
-      }
-      
-      return createCartResponse(handleCartCookie(cart));
-    }
+
+    // Create response with updated cart cookie
+    return createCartResponse(handleCartCookie(cart));
+  } catch (err) {
+    return handleError(err);
   }
-
-  if (url.pathname.startsWith('/product/')) {
-    try {
-      const productMatch = url.pathname.match(/^\/product\/(\d+)\/?$/);
-      if (productMatch) {
-        const productId = parseInt(productMatch[1]);
-        const items = await store.get('Items');
-        
-        if (!items) {
-          return createResponse("Products not found", 404);
-        }
-
-        const products = await items.json();
-        const product = products.Products.find(p => p.ProductId === productId);
-        
-        if (!product) {
-          return createResponse("Product not found", 404);
-        }
-
-        let content = new TextDecoder().decode(PAGES.product);
-        
-        // Replace product template variables
-        const replacements = {
-          "{Product_Title}": product.ProductName,
-          "{Product_image_path}": product.ProductImage,
-          "{Product_Description}": product.ProductDesc,
-          "{Product_Price}": product.ProductPrice.toFixed(2),
-          "{Product_Id}": product.ProductId,
-          "{JSON}": JSON.stringify(product)
-        };
-
-        content = replaceTemplateVars(content, replacements);
-        return createResponse(content);
-
-      }
-    } catch (err) {
-      console.error("Error processing product view:", err);
-      return createResponse("Error processing product request", 500);
-    }
-  }
-
-  // Handle image requests
-  if (url.pathname.startsWith("/images/")) {
-    const filename = url.pathname.replace(/^.*(\\|\/|\:)/, '');
-    const ext = filename.split('.').pop();
-    
-    try {
-      const item = await store.get(filename);
-      if (!item) {
-        return createResponse("Image not found", 404);
-      }
-      return createResponse(
-        await item.body,
-        200,
-        IMAGE_HEADERS(ext)
-      );
-    } catch (err) {
-      console.error(`Error fetching image ${filename}:`, err);
-      return createResponse("Error processing image", 500);
-    }
-  }
-
-  // Default 404 response
-  return createResponse("Page not found", 404);
 }
+
+/**
+ * Image Request Handler
+ * Serves product images with appropriate caching
+ * @param {string} path - Request path containing image filename
+ * @param {KVStore} store - Key-value store instance
+ */
+async function handleImageRequest(path, store) {
+  try {
+    const filename = path.split('/').pop();
+    const ext = filename.split('.').pop().toLowerCase();
+    
+    // Fetch image data from KV store
+    const imageData = await store.get(`image:${filename}`);
+    if (!imageData) throw new NotFoundError("Image not found");
+
+    // Return image with appropriate headers
+    return new Response(imageData.body, {
+      headers: new Headers(IMAGE_HEADERS(ext))
+    });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+
+// Register the main request handler
+addEventListener("fetch", event => {
+  event.respondWith(handleRequest(event.request));
+});
