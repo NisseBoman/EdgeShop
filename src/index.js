@@ -8,6 +8,7 @@
 // Import Fastly-specific modules
 import { includeBytes } from "fastly:experimental";  // For loading static files at compile time
 import { KVStore } from "fastly:kv-store";          // For key-value store operations
+import { SimpleCache } from "fastly:cache";         // For caching individual products
 
 /**
  * Static HTML Templates
@@ -23,12 +24,30 @@ const PAGES = {
 };
 
 /**
+ * Cache Configuration
+ * Define different cache strategies using standard Cache-Control headers
+ */
+const CACHE_CONFIGS = {
+  product: {
+    "Cache-Control": "public, max-age=3600",         // 1 hour
+    "Surrogate-Control": "max-age=3600"
+  },
+  static: {
+    "Cache-Control": "public, max-age=86400",        // 24 hours
+    "Surrogate-Control": "max-age=86400"
+  },
+  none: {
+    "Cache-Control": "private, no-store, no-cache, must-revalidate",
+    "Pragma": "no-cache"
+  }
+};
+
+/**
  * Common Response Headers
  * Define reusable header configurations for different content types
  */
 const COMMON_HEADERS = {
-  "Content-Type": "text/html; charset=utf-8",
-  "Cache-Control": "public, max-age=432000"  // Cache for 5 days
+  "Content-Type": "text/html; charset=utf-8"
 };
 
 /**
@@ -37,20 +56,21 @@ const COMMON_HEADERS = {
  */
 const IMAGE_HEADERS = ext => ({
   "Content-Type": `image/${ext}`,
-  "Cache-Control": "public, max-age=432000"
+  ...CACHE_CONFIGS.static
 });
 
 /**
  * Response Creator Helper
- * Standardizes response creation across the application
- * @param {string|Uint8Array} body - Response body content
- * @param {number} status - HTTP status code (default: 200)
- * @param {Object} headers - Response headers (default: COMMON_HEADERS)
  */
 const createResponse = (body, status = 200, headers = COMMON_HEADERS) => {
+  const responseHeaders = new Headers({
+    ...headers,
+    "Fastly-Debug-TTL": headers["Cache-Control"] || "no-cache"
+  });
+  
   return new Response(body, {
     status,
-    headers: new Headers(headers)
+    headers: responseHeaders
   });
 };
 
@@ -129,6 +149,38 @@ const createCartResponse = (headers) => {
 };
 
 /**
+ * Product Cache Helper
+ * Manages caching of individual products with a 60-minute TTL
+ */
+const PRODUCT_CACHE_TTL = 60; // 60 seconds TTL for testing
+
+async function getProductFromCache(productId) {
+  const cacheKey = `product:${productId}`;
+  
+  try {
+    // Try to get product from cache first using SimpleCache static method
+    const cachedProduct = await SimpleCache.get(cacheKey);
+    if (cachedProduct) {
+      return JSON.parse(cachedProduct);
+    }
+  } catch (e) {
+    console.error('Cache get error:', e);
+  }
+  return null;
+}
+
+async function setProductInCache(productId, productData) {
+  const cacheKey = `product:${productId}`;
+  
+  try {
+    // Store product in cache with TTL using SimpleCache static method
+    await SimpleCache.set(cacheKey, JSON.stringify(productData), { ttl: PRODUCT_CACHE_TTL });
+  } catch (e) {
+    console.error('Cache set error:', e);
+  }
+}
+
+/**
  * Route Handlers
  * Each handler manages a specific route in the application
  */
@@ -156,7 +208,13 @@ async function handleHome(store) {
       replacements[`{${index + 1}_product_desc}`] = product.ProductDesc;
     });
     
-    return createResponse(replaceTemplateVars(content, replacements));
+    // Add cache headers for home page
+    const cacheHeaders = {
+      ...CACHE_CONFIGS.static,
+      "Surrogate-Key": "home-page"
+    };
+
+    return createResponse(replaceTemplateVars(content, replacements), 200, COMMON_HEADERS, cacheHeaders);
   } catch (err) {
     return handleError(err);
   }
@@ -165,6 +223,7 @@ async function handleHome(store) {
 /**
  * Products Page Handler
  * Renders the product listing page showing all available products
+ * Now with caching support for individual products
  * @param {KVStore} store - Key-value store instance for product data
  */
 async function handleProducts(store) {
@@ -176,12 +235,17 @@ async function handleProducts(store) {
     const products = await items.json();
     let content = new TextDecoder().decode(PAGES.allProducts);
     
+    // Cache each product individually as we process them
+    await Promise.all(products.Products.map(async (product) => {
+      await setProductInCache(product.ProductId, product);
+    }));
+    
     // Generate HTML for each product in the catalog
     const productListHtml = products.Products.map(product => `
       <div class="product-list-item p-4">
         <div class="row align-items-center">
           <div class="col-auto">
-             <a href="/product/${product.ProductId}/"<img src="/images/${product.ProductImage}" class="product-image" alt="${product.ProductName}"></a>
+            <a href="/product/${product.ProductId}/"><img src="/images/${product.ProductImage}" class="product-image" alt="${product.ProductName}"></a>
           </div>
           <div class="col">
             <h3 class="product-title mb-2">${product.ProductName}</h3>
@@ -198,7 +262,14 @@ async function handleProducts(store) {
     `).join('');
     
     content = content.replace('{all_json}', productListHtml);
-    return createResponse(content);
+    
+    // Add cache headers for product listing
+    const cacheHeaders = {
+      ...CACHE_CONFIGS.static,
+      "Surrogate-Key": "product-listing"
+    };
+
+    return createResponse(content, 200, COMMON_HEADERS, cacheHeaders);
   } catch (err) {
     return handleError(err);
   }
@@ -211,7 +282,12 @@ async function handleProducts(store) {
 async function handleAbout() {
   try {
     let content = new TextDecoder().decode(PAGES.about);
-    return createResponse(content);
+    // Add cache headers for static about page
+    const cacheHeaders = {
+      ...CACHE_CONFIGS.static,
+      "Surrogate-Control": "max-age=86400"  // Cache at edge for 24 hours
+    };
+    return createResponse(content, 200, COMMON_HEADERS, cacheHeaders);
   } catch (err) {
     return handleError(err);
   }
@@ -262,15 +338,15 @@ async function handleCart(store, req) {
         '<div class="text-muted small mb-2">Free shipping on orders over $500</div>'
     });
     
-    // Return cart page with no-cache headers
+    // Return cart page with strict no-cache headers
     return new Response(content, {
       status: 200,
       headers: new Headers({
         "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-store, no-cache, must-revalidate",
-        "Pragma": "no-cache",
-        "Expires": "0"
-      })
+        "Cache-Control": "private, no-store, no-cache, must-revalidate",
+        "Vary": "Cookie"
+      }),
+      cacheOverride: CACHE_CONFIGS.none
     });
   } catch (err) {
     return handleError(err);
@@ -354,16 +430,6 @@ const createCartItemHtml = (product, qty) => `
   </div>
 `;
 
-const CACHE_HEADERS = {
-  public: { "Cache-Control": "public, max-age=432000" },
-  private: { "Cache-Control": "private, no-cache" },
-  none: {
-    "Cache-Control": "no-store, no-cache, must-revalidate",
-    "Pragma": "no-cache",
-    "Expires": "0"
-  }
-};
-
 /**
  * Main Request Handler
  * Entry point for all incoming requests to the application
@@ -406,24 +472,32 @@ async function handleRequest(req) {
 /**
  * Product Detail Page Handler
  * Renders the detailed view of a single product
+ * Now with caching support
  * @param {string} path - Request path containing product ID
  * @param {KVStore} store - Key-value store instance
  */
 async function handleProductDetail(path, store) {
   try {
-    // Extract product ID from URL
     const productId = parseInt(path.split('/')[2]);
     if (isNaN(productId)) throw new NotFoundError();
 
-    // Fetch product data
-    const items = await store.get('Items');
-    if (!items) throw new NotFoundError();
+    // Try to get product from cache first
+    let product = await getProductFromCache(productId);
+    
+    // If not in cache, fetch from KV store
+    if (!product) {
+      const items = await store.get('Items');
+      if (!items) throw new NotFoundError();
 
-    const products = await items.json();
-    const product = products.Products.find(p => p.ProductId === productId);
-    if (!product) throw new NotFoundError("Product not found");
+      const products = await items.json();
+      product = products.Products.find(p => p.ProductId === productId);
+      
+      if (!product) throw new NotFoundError("Product not found");
+      
+      // Store in cache for future requests
+      await setProductInCache(productId, product);
+    }
 
-    // Prepare template replacements
     let content = new TextDecoder().decode(PAGES.product);
     const replacements = {
       '{Product_Title}': product.ProductName,
@@ -434,7 +508,20 @@ async function handleProductDetail(path, store) {
       '{JSON}': JSON.stringify(product, null, 2)
     };
 
-    return createResponse(replaceTemplateVars(content, replacements));
+    // Add cache headers for product pages
+    const cacheHeaders = {
+      ...COMMON_HEADERS,
+      ...CACHE_CONFIGS.product,
+      "Surrogate-Key": `product-${product.ProductId}`,
+      "ETag": `"product-${product.ProductId}-${Date.now()}"`,
+      "X-Cache-Status": product ? "HIT" : "MISS"  // Add cache status header
+    };
+
+    return createResponse(
+      replaceTemplateVars(content, replacements),
+      200,
+      cacheHeaders
+    );
   } catch (err) {
     return handleError(err);
   }
@@ -467,8 +554,14 @@ async function handleCartOperation(req, store) {
       delete cart[productId];  // Remove item if quantity is 0
     }
 
-    // Create response with updated cart cookie
-    return createCartResponse(handleCartCookie(cart));
+    // Add no-cache headers for cart operations
+    const cartHeaders = {
+      ...handleCartCookie(cart),
+      ...CACHE_CONFIGS.none,
+      "Vary": "Cookie"
+    };
+
+    return createCartResponse(cartHeaders);
   } catch (err) {
     return handleError(err);
   }
@@ -485,13 +578,16 @@ async function handleImageRequest(path, store) {
     const filename = path.split('/').pop();
     const ext = filename.split('.').pop().toLowerCase();
     
-    // Fetch image data from KV store
     const imageData = await store.get(filename);
     if (!imageData) throw new NotFoundError("Image not found");
 
-    // Return image with appropriate headers
+    const imageHeaders = {
+      ...IMAGE_HEADERS(ext),
+      "Surrogate-Key": `image-${filename}`
+    };
+
     return new Response(imageData.body, {
-      headers: new Headers(IMAGE_HEADERS(ext))
+      headers: new Headers(imageHeaders)
     });
   } catch (err) {
     return handleError(err);
