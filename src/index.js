@@ -539,12 +539,14 @@ async function handleCartOperation(req, store) {
       return createResponse("Method not allowed", 405);
     }
 
-    // Parse cart cookie and form data
+    // Parse cart cookie
     const cartCookie = req.headers.get('cookie')?.match(/cart=([^;]+)/)?.[1] || '';
     let cart = parseCart(cartCookie);
     
-    const formData = await req.formData();
-    const quantity = parseInt(formData.get('quantity')) || 0;
+    // Parse form data from request body
+    const text = await req.text();
+    const params = new URLSearchParams(text);
+    const quantity = parseInt(params.get('quantity')) || 0;
     const productId = req.url.split('/').pop();
 
     // Update cart contents
