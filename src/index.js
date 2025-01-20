@@ -181,7 +181,7 @@ async function handleProducts(store) {
       <div class="product-list-item p-4">
         <div class="row align-items-center">
           <div class="col-auto">
-            <img src="/images/${product.ProductImage}" class="product-image" alt="${product.ProductName}">
+             <a href="/product/${product.ProductId}/"<img src="/images/${product.ProductImage}" class="product-image" alt="${product.ProductName}"></a>
           </div>
           <div class="col">
             <h3 class="product-title mb-2">${product.ProductName}</h3>
