@@ -372,7 +372,7 @@ const CACHE_HEADERS = {
 async function handleRequest(req) {
   try {
     // Initialize KV store connection
-    const store = new KVStore('products');
+    const store = new KVStore('EdgeStoreItems');
     const url = new URL(req.url);
     const path = url.pathname;
 
@@ -486,7 +486,7 @@ async function handleImageRequest(path, store) {
     const ext = filename.split('.').pop().toLowerCase();
     
     // Fetch image data from KV store
-    const imageData = await store.get(`image:${filename}`);
+    const imageData = await store.get(filename);
     if (!imageData) throw new NotFoundError("Image not found");
 
     // Return image with appropriate headers
