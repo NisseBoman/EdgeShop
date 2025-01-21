@@ -181,6 +181,210 @@ async function setProductInCache(productId, productData) {
 }
 
 /**
+ * API Response Headers
+ * Define reusable header configurations for API responses
+ */
+const API_HEADERS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type"
+};
+
+/**
+ * API Response Creator Helper
+ * Creates standardized API responses
+ */
+const createApiResponse = (data, status = 200, headers = API_HEADERS) => {
+  const responseHeaders = new Headers({
+    ...headers,
+    "Fastly-Debug-TTL": headers["Cache-Control"] || "no-cache"
+  });
+  
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: responseHeaders
+  });
+};
+
+/**
+ * API Error Response Creator
+ * Creates standardized error responses for the API
+ */
+const createApiError = (message, status = 400) => {
+  return createApiResponse({
+    error: {
+      status,
+      message
+    }
+  }, status);
+};
+
+/**
+ * Product Filter and Sort Helper
+ * Handles filtering and sorting of products based on query parameters
+ */
+function filterAndSortProducts(products, query) {
+  let filteredProducts = [...products];
+
+  // Apply filters
+  if (query.has('search')) {
+    const searchTerm = query.get('search').toLowerCase();
+    filteredProducts = filteredProducts.filter(product => 
+      product.ProductName.toLowerCase().includes(searchTerm) ||
+      product.ProductDesc.toLowerCase().includes(searchTerm)
+    );
+  }
+
+  if (query.has('min_price')) {
+    const minPrice = parseFloat(query.get('min_price'));
+    if (!isNaN(minPrice)) {
+      filteredProducts = filteredProducts.filter(product => 
+        product.ProductPrice >= minPrice
+      );
+    }
+  }
+
+  if (query.has('max_price')) {
+    const maxPrice = parseFloat(query.get('max_price'));
+    if (!isNaN(maxPrice)) {
+      filteredProducts = filteredProducts.filter(product => 
+        product.ProductPrice <= maxPrice
+      );
+    }
+  }
+
+  // Apply sorting
+  const sort = query.get('sort');
+  const order = query.get('order')?.toLowerCase() === 'desc' ? -1 : 1;
+
+  switch(sort?.toLowerCase()) {
+    case 'price':
+      filteredProducts.sort((a, b) => (a.ProductPrice - b.ProductPrice) * order);
+      break;
+    case 'name':
+      filteredProducts.sort((a, b) => a.ProductName.localeCompare(b.ProductName) * order);
+      break;
+    // Default sorting is by ID
+    default:
+      filteredProducts.sort((a, b) => (a.ProductId - b.ProductId) * order);
+  }
+
+  return filteredProducts;
+}
+
+/**
+ * API Products Handler
+ * Handles all API requests under /api/products
+ * Supports filtering and sorting via query parameters:
+ * - search: Search term for product name and description
+ * - min_price: Minimum price filter
+ * - max_price: Maximum price filter
+ * - sort: Sort field (price, name)
+ * - order: Sort order (asc, desc)
+ */
+async function handleApiProducts(req, store) {
+  try {
+    const url = new URL(req.url);
+    const pathParts = url.pathname.split('/');
+    const productId = pathParts[3]; // /api/products/:id
+
+    // Handle OPTIONS request for CORS
+    if (req.method === 'OPTIONS') {
+      return createApiResponse({}, 204);
+    }
+
+    // Handle specific product request
+    if (productId) {
+      return handleApiProductDetail(productId, store);
+    }
+
+    // Handle product listing with filters and sorting
+    const items = await store.get('Items');
+    if (!items) throw new NotFoundError("Products not found");
+
+    const products = await items.json();
+    
+    // Apply filters and sorting
+    const filteredProducts = filterAndSortProducts(products.Products, url.searchParams);
+    
+    // Add cache headers for API response
+    // Include query parameters in the cache key
+    const cacheKey = `api-products-${url.search}`;
+    const apiHeaders = {
+      ...API_HEADERS,
+      ...CACHE_CONFIGS.product,
+      "Surrogate-Key": cacheKey,
+      "Vary": "Accept-Encoding"
+    };
+
+    return createApiResponse({
+      data: filteredProducts,
+      meta: {
+        total: filteredProducts.length,
+        filters: {
+          search: url.searchParams.get('search') || null,
+          min_price: url.searchParams.get('min_price') || null,
+          max_price: url.searchParams.get('max_price') || null,
+          sort: url.searchParams.get('sort') || 'id',
+          order: url.searchParams.get('order') || 'asc'
+        }
+      }
+    }, 200, apiHeaders);
+
+  } catch (err) {
+    console.error('API Error:', err);
+    return createApiError(err.message, err.status || 500);
+  }
+}
+
+/**
+ * API Product Detail Handler
+ * Handles requests for specific products
+ */
+async function handleApiProductDetail(productId, store) {
+  try {
+    const id = parseInt(productId);
+    if (isNaN(id)) {
+      return createApiError("Invalid product ID", 400);
+    }
+
+    // Try to get product from cache first
+    let product = await getProductFromCache(id);
+    
+    // If not in cache, fetch from KV store
+    if (!product) {
+      const items = await store.get('Items');
+      if (!items) throw new NotFoundError("Products not found");
+
+      const products = await items.json();
+      product = products.Products.find(p => p.ProductId === id);
+      
+      if (!product) throw new NotFoundError("Product not found");
+      
+      // Store in cache for future requests
+      await setProductInCache(id, product);
+    }
+
+    // Add cache headers for API response
+    const apiHeaders = {
+      ...API_HEADERS,
+      ...CACHE_CONFIGS.product,
+      "Surrogate-Key": `api-product-${id}`,
+      "X-Cache-Status": product ? "HIT" : "MISS"
+    };
+
+    return createApiResponse({
+      data: product
+    }, 200, apiHeaders);
+
+  } catch (err) {
+    console.error('API Error:', err);
+    return createApiError(err.message, err.status || 500);
+  }
+}
+
+/**
  * Route Handlers
  * Each handler manages a specific route in the application
  */
@@ -441,6 +645,11 @@ async function handleRequest(req) {
     const store = new KVStore('EdgeStoreItems');
     const url = new URL(req.url);
     const path = url.pathname;
+
+    // Handle API requests
+    if (path.startsWith('/api/products')) {
+      return handleApiProducts(req, store);
+    }
 
     // Handle cart operations (add/update/remove items)
     if (path.startsWith('/cart/')) {
