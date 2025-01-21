@@ -187,7 +187,7 @@ async function setProductInCache(productId, productData) {
 const API_HEADERS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type"
 };
 
@@ -274,24 +274,261 @@ function filterAndSortProducts(products, query) {
 }
 
 /**
+ * Multipart Form Parser
+ * Parses multipart/form-data request body with proper binary handling
+ */
+async function parseMultipartForm(request) {
+  const contentType = request.headers.get("content-type");
+  if (!contentType || !contentType.includes("multipart/form-data")) {
+    throw new Error("Content-Type must be multipart/form-data");
+  }
+
+  const arrayBuffer = await request.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+  const decoder = new TextDecoder();
+  const text = decoder.decode(uint8Array);
+  
+  const boundary = contentType.split("boundary=")[1];
+  const parts = text.split(`--${boundary}`);
+  const formData = {};
+
+  for (const part of parts) {
+    if (part.trim() && !part.includes("--\r\n")) {
+      const [headerText, ...bodyParts] = part.split("\r\n\r\n");
+      const name = headerText.match(/name="([^"]+)"/)?.[1];
+      
+      if (name) {
+        const body = bodyParts.join("\r\n\r\n").replace(/\r\n$/, "");
+        
+        // Handle file upload
+        if (headerText.includes('filename="')) {
+          const filename = headerText.match(/filename="([^"]+)"/)?.[1];
+          const contentType = headerText.match(/Content-Type: (.+)/)?.[1];
+          
+          // Calculate the binary data position in the original array buffer
+          const headerLength = headerText.length + 4; // +4 for \r\n\r\n
+          const startPos = arrayBuffer.byteLength - uint8Array.length + part.indexOf(body) + headerLength;
+          const endPos = startPos + body.length - 2; // -2 to remove trailing \r\n
+          
+          // Extract binary data as Uint8Array
+          const binaryData = uint8Array.slice(startPos, endPos);
+          
+          formData[name] = {
+            filename,
+            contentType,
+            data: binaryData
+          };
+        } else {
+          formData[name] = body;
+        }
+      }
+    }
+  }
+
+  return formData;
+}
+
+/**
+ * Product Creator
+ * Creates a new product and stores it in KV store
+ */
+async function createProduct(formData, store) {
+  // Validate required fields
+  if (!formData.name || !formData.price || !formData.description || !formData.image) {
+    throw new Error("Missing required fields");
+  }
+
+  // Get existing products
+  const items = await store.get('Items');
+  if (!items) {
+    throw new Error("Failed to get products");
+  }
+
+  const products = await items.json();
+  
+  // Generate new product ID
+  const newProductId = Math.max(...products.Products.map(p => p.ProductId), 0) + 1;
+  
+  // Store image in KV store
+  const imageFileName = `product_${newProductId}_${formData.image.filename}`;
+  await store.put(imageFileName, formData.image.data.buffer, {
+    metadata: { contentType: formData.image.contentType }
+  });
+
+  // Create new product object
+  const newProduct = {
+    ProductId: newProductId,
+    ProductName: formData.name,
+    ProductDesc: formData.description,
+    ProductPrice: parseFloat(formData.price),
+    ProductImage: imageFileName
+  };
+
+  // Add to products array
+  products.Products.push(newProduct);
+
+  // Update products in KV store
+  await store.put('Items', JSON.stringify(products));
+
+  // Invalidate cache
+  await SimpleCache.purge(`product:${newProductId}`, { scope: "global" });
+
+  return newProduct;
+}
+
+/**
+ * Product Updater
+ * Updates an existing product in KV store
+ */
+async function updateProduct(productId, formData, store) {
+  // Validate required fields
+  if (!formData.name || !formData.price || !formData.description) {
+    throw new Error("Missing required fields");
+  }
+
+  // Get existing products
+  const items = await store.get('Items');
+  if (!items) {
+    throw new Error("Failed to get products");
+  }
+
+  const products = await items.json();
+  const productIndex = products.Products.findIndex(p => p.ProductId === parseInt(productId));
+  
+  if (productIndex === -1) {
+    throw new Error("Product not found");
+  }
+
+  // Update product object
+  const updatedProduct = {
+    ...products.Products[productIndex],
+    ProductName: formData.name,
+    ProductDesc: formData.description,
+    ProductPrice: parseFloat(formData.price)
+  };
+
+  // Handle image update if provided
+  if (formData.image) {
+    // Delete old image if it exists
+    const oldImageFileName = products.Products[productIndex].ProductImage;
+    try {
+      await store.delete(oldImageFileName);
+    } catch (error) {
+      console.error('Failed to delete old image:', error);
+    }
+
+    // Store new image
+    const imageFileName = `product_${productId}_${formData.image.filename}`;
+    await store.put(imageFileName, formData.image.data.buffer, {
+      metadata: { contentType: formData.image.contentType }
+    });
+    updatedProduct.ProductImage = imageFileName;
+  }
+
+  // Update products array
+  products.Products[productIndex] = updatedProduct;
+
+  // Update products in KV store
+  await store.put('Items', JSON.stringify(products));
+
+  // Invalidate cache
+  await SimpleCache.purge(`product:${productId}`, { scope: "global" });
+
+  return updatedProduct;
+}
+
+/**
+ * Product Deleter
+ * Deletes a product and its image from KV store
+ */
+async function deleteProduct(productId, store) {
+  // Get existing products
+  const items = await store.get('Items');
+  if (!items) {
+    throw new Error("Failed to get products");
+  }
+
+  const products = await items.json();
+  const productIndex = products.Products.findIndex(p => p.ProductId === parseInt(productId));
+  
+  if (productIndex === -1) {
+    throw new Error("Product not found");
+  }
+
+  // Delete product image
+  const imageFileName = products.Products[productIndex].ProductImage;
+  try {
+    await store.delete(imageFileName);
+  } catch (error) {
+    console.error('Failed to delete image:', error);
+  }
+
+  // Remove product from array
+  products.Products.splice(productIndex, 1);
+
+  // Update products in KV store
+  await store.put('Items', JSON.stringify(products));
+
+  // Invalidate cache
+  await SimpleCache.purge(`product:${productId}`, { scope: "global" });
+}
+
+/**
  * API Products Handler
- * Handles all API requests under /api/products
- * Supports filtering and sorting via query parameters:
- * - search: Search term for product name and description
- * - min_price: Minimum price filter
- * - max_price: Maximum price filter
- * - sort: Sort field (price, name)
- * - order: Sort order (asc, desc)
+ * Now with support for creating, updating, and deleting products
  */
 async function handleApiProducts(req, store) {
   try {
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
-    const productId = pathParts[3]; // /api/products/:id
+    const productId = pathParts[3];
 
     // Handle OPTIONS request for CORS
     if (req.method === 'OPTIONS') {
       return createApiResponse({}, 204);
+    }
+
+    // Handle product creation
+    if (req.method === 'POST' && !productId) {
+      try {
+        const formData = await parseMultipartForm(req);
+        const newProduct = await createProduct(formData, store);
+        
+        return createApiResponse({
+          data: newProduct,
+          message: "Product created successfully"
+        }, 201);
+      } catch (error) {
+        return createApiError(error.message, 400);
+      }
+    }
+
+    // Handle product update
+    if (req.method === 'PUT' && productId) {
+      try {
+        const formData = await parseMultipartForm(req);
+        const updatedProduct = await updateProduct(productId, formData, store);
+        
+        return createApiResponse({
+          data: updatedProduct,
+          message: "Product updated successfully"
+        }, 200);
+      } catch (error) {
+        return createApiError(error.message, error.message.includes("not found") ? 404 : 400);
+      }
+    }
+
+    // Handle product deletion
+    if (req.method === 'DELETE' && productId) {
+      try {
+        await deleteProduct(productId, store);
+        
+        return createApiResponse({
+          message: "Product deleted successfully"
+        }, 200);
+      } catch (error) {
+        return createApiError(error.message, error.message.includes("not found") ? 404 : 400);
+      }
     }
 
     // Handle specific product request
