@@ -1,8 +1,8 @@
 # EdgeShop demo / playground
 
-[![Deploy to Fastly](https://deploy.edgecompute.app/button)](https://deploy.edgecompute.app/deploy)
 
-This is a demo created that uses an older API created by me and with a webfront using Fastly Comnpute @ Edge. 
+
+This is a demo created using Fastly Comnpute @ Edge and Fastly KV-store. No backends needed at all. 
 
 
 **For more details about other starter kits for Compute@Edge, see the [Fastly developer hub](https://developer.fastly.com/solutions/starters)**
